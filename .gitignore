@@ -1,0 +1,9 @@
+.eunit/*
+deps/*
+priv/*
+doc/*
+*.o
+*.beam
+*~
+ebin
+rebar
