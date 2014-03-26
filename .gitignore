@@ -1,6 +1,5 @@
 .eunit/*
 deps/*
-priv/*
 doc/*
 *.o
 *.beam
