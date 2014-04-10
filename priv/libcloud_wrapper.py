@@ -6,7 +6,7 @@ import sys
 import json
 import time
 
-from libcloud.compute.types import Provider
+from libcloud.compute.types import Provider, KeyPairDoesNotExistError
 from libcloud.compute.providers import get_driver
 
 
@@ -98,7 +98,7 @@ def create_security_group(conn, params):
     except Exception as e:
         if 'InvalidGroup.Duplicate' in e.args[0]:
             exit_json_err({'error': 'group_already_exists',
-                       'group_name': sec_group_name})
+                           'group_name': sec_group_name})
         else:
             raise
     exit_success({'group_id': group['group_id']})
@@ -118,6 +118,61 @@ def delete_security_group_by_name(conn, params):
         else:
             raise
     exit_success({'success': success})
+
+
+def get_key_pair(conn, params):
+    """Get a key pair."""
+
+    key_name = params['keyName']
+
+    # Upload keypair
+    try:
+        key_pair = conn.get_key_pair(name=key_name)
+    except KeyPairDoesNotExistError:
+        exit_json_err({'error': 'no_such_key',
+                       'key_name': key_name})
+
+    exit_success({'name': key_pair.name,
+                  'fingerprint': key_pair.fingerprint,
+                  'public_key': key_pair.public_key,
+                  'private_key': key_pair.private_key,
+                  'extra': key_pair.extra})
+
+
+def import_key_pair_from_string(conn, params):
+    """Import a key pair from a string."""
+
+    key_name = params['keyName']
+    key_material = params['keyMaterial']
+
+    # Upload keypair
+    try:
+        key_pair = conn.import_key_pair_from_string(name=key_name,
+                                                    key_material=key_material)
+    except Exception as e:
+        if 'InvalidKeyPair.Duplicate' in e.args[0]:
+            exit_json_err({'error': 'key_already_exists',
+                           'key_name': key_name})
+        else:
+            raise
+
+    exit_success({})
+
+
+def delete_key_pair(conn, params):
+    """Delete a key pair."""
+
+    key_name = params['keyName']
+
+    # Upload keypair
+    try:
+        key_pair = conn.get_key_pair(name=key_name)
+        conn.delete_key_pair(key_pair)
+    except KeyPairDoesNotExistError:
+        exit_json_err({'error': 'no_such_key',
+                       'key_name': key_name})
+
+    exit_success({})
 
 
 def connect(params):
@@ -143,12 +198,9 @@ def main():
     conn = connect(params)
 
     action = params['action']
-    if action == 'create_instance':
-        create_instance(conn, params)
-    elif action == 'create_security_group':
-        create_security_group(conn, params)
-    elif action == 'delete_security_group_by_name':
-        delete_security_group_by_name(conn, params)
+    globs = globals()
+    if action in globs:
+        globs[action](conn, params)
     else:
         exit_str_err("No such action: %s", action)
 

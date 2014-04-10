@@ -8,6 +8,9 @@
 -copyright("2014, Erlang Solutions Ltd.").
 
 -export([create_instance/9,
+         get_key_pair/4,
+         import_key_pair_from_string/5,
+         delete_key_pair/4,
          create_security_group/5,
          delete_security_group_by_name/4]).
 
@@ -76,6 +79,116 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
                         [NodeName, String]),
             Error
     end.
+
+%%------------------------------------------------------------------------------
+%% @doc Get a key pair.
+%%
+%% Contents of the result in case of success:
+%%
+%% <ul>
+%% <li>`<<"name">> :: binary()' - Key name.</li>
+%% <li>`<<"fingerprint">> :: binary()'</li>
+%% <li>`<<"public_key">> :: binary()'</li>
+%% <li>`<<"private_key">> :: binary()'</li>
+%% <li>`<<"extra">> :: term()'</li>
+%% </li>
+%% </ul>
+%% @end
+%%------------------------------------------------------------------------------
+-spec get_key_pair(Provider    :: string() | binary(),
+                   UserName    :: string() | binary(),
+                   Password    :: string() | binary(),
+                   KeyName     :: string() | binary()) ->
+          {'ok', json_term()} |
+          {error, {ErrorAtom :: no_such_key,
+                   Details :: json_term()}} |
+          {'error', string()}.
+get_key_pair(Provider, UserName, Password, KeyName) ->
+    JsonInput = [{<<"action">>,      <<"get_key_pair">>},
+                 {<<"provider">>,    bin(Provider)},
+                 {<<"userName">>,    bin(UserName)},
+                 {<<"password">>,    bin(Password)},
+                 {<<"keyName">>,     bin(KeyName)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            {ok, JsonRes};
+        {error, Error} ->
+            {error, Error}
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Import a key pair from a string.
+%%
+%% Contents of the result in case of success:
+%%
+%% <ul>
+%% <li>`<<"group_id">> :: binary()' - The ID of the security group.</li>
+%% </li>
+%% </ul>
+%% @end
+%%------------------------------------------------------------------------------
+-spec import_key_pair_from_string(Provider    :: string() | binary(),
+                                  UserName    :: string() | binary(),
+                                  Password    :: string() | binary(),
+                                  KeyName     :: string() | binary(),
+                                  KeyMaterial :: string() | binary()) ->
+          {'ok', json_term()} |
+          {error, {ErrorAtom :: key_already_exists,
+                   Details :: json_term()}} |
+          {'error', string()}.
+import_key_pair_from_string(Provider, UserName, Password, KeyName,
+                            KeyMaterial) ->
+
+    lager:debug("Import key pair from string (KeyName=~p)", [KeyName]),
+    JsonInput = [{<<"action">>,      <<"import_key_pair_from_string">>},
+                 {<<"provider">>,    bin(Provider)},
+                 {<<"userName">>,    bin(UserName)},
+                 {<<"password">>,    bin(Password)},
+                 {<<"keyName">>,     bin(KeyName)},
+                 {<<"keyMaterial">>, bin(KeyMaterial)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            lager:debug("Key pair imported successfully (KeyName=~p)",
+                        [KeyName]),
+            {ok, JsonRes};
+        {error, Error} ->
+            lager:debug("Key pair import error (KeyName=~p): ~p",
+                        [KeyName, Error]),
+            {error, Error}
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Delete a key pair.
+%%
+%% In case of success, the result is an empty JSON object.
+%%
+%% <ul>
+%% @end
+%%------------------------------------------------------------------------------
+-spec delete_key_pair(Provider    :: string() | binary(),
+                      UserName    :: string() | binary(),
+                      Password    :: string() | binary(),
+                      KeyName     :: string() | binary()) ->
+          {'ok', json_term()} |
+          {error, {ErrorAtom :: no_such_key,
+                   Details :: json_term()}} |
+          {'error', string()}.
+delete_key_pair(Provider, UserName, Password, KeyName) ->
+    JsonInput = [{<<"action">>,      <<"delete_key_pair">>},
+                 {<<"provider">>,    bin(Provider)},
+                 {<<"userName">>,    bin(UserName)},
+                 {<<"password">>,    bin(Password)},
+                 {<<"keyName">>,     bin(KeyName)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            {ok, JsonRes};
+        {error, Error} ->
+            {error, Error}
+    end.
+
 %%------------------------------------------------------------------------------
 %% @doc Create a security group.
 %%
@@ -112,10 +225,10 @@ create_security_group(Provider, UserName, Password, SecurityGroupName,
             lager:debug("Security group created successfully (Name=~p)",
                         [SecurityGroupName]),
             {ok, JsonRes};
-        {error, String} = Error ->
+        {error, Error} ->
             lager:debug("Security group creation error (Name=~p): ~p",
-                        [SecurityGroupName, String]),
-            Error
+                        [SecurityGroupName, Error]),
+            {error, Error}
     end.
 
 %%------------------------------------------------------------------------------
