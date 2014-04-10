@@ -37,35 +37,31 @@ def create_instance(conn, params):
     node_name = params['nodeName']
     size_id = params['sizeId']
     image_id = params['imageId']
-    pub_key_name = params['pubKeyName']
-    pub_key_data = params['pubKeyData']
+    key_name = params['keyName']
 
     # Get size
     sizes = conn.list_sizes()
     try:
         size = next(x for x in sizes if x.id == size_id)
     except StopIteration:
-        exit_str_err("No such size: %s", size_id)
+        exit_json_err({'error': 'no_such_size',
+                       'size_id': size_id})
 
     # Get image
     images = conn.list_images()
     try:
         image = next(x for x in images if x.id == image_id)
     except StopIteration:
-        exit_str_err("No such image: %s", image_id)
-
-    # Upload keypair
-    try:
-        conn.import_key_pair_from_string(name=pub_key_name,
-                                         key_material=pub_key_data)
-    except Exception as e:
-        # If the key already exists, that is fine
-        if 'InvalidKeyPair.Duplicate' not in e.args[0]:
-            raise
+        exit_json_err({'error': 'no_such_image',
+                       'image_id': image_id})
 
     # Create node
-    node = conn.create_node(name=node_name, size=size, image=image,
-                            ex_keyname=pub_key_name)
+    try:
+        node = conn.create_node(name=node_name, size=size, image=image,
+                                ex_keyname=key_name)
+    except KeyPairDoesNotExistError:
+        exit_json_err({'error': 'no_such_key',
+                       'key_name': key_name})
 
     if params.get('waitUntilRunning'):
         booting_time = params.get('bootingTime', 0)
@@ -83,7 +79,25 @@ def create_instance(conn, params):
             break
 
     exit_success({'id': node.id,
-                 'publicIps': node.public_ips})
+                  'publicIps': node.public_ips})
+
+
+def destroy_instance(conn, params):
+    """Destroy a virtual machine instance in the cloud."""
+
+    node_id = params['nodeId']
+
+    # Get node
+    try:
+        node = next(x for x in conn.list_nodes() if x.id == node_id)
+    except StopIteration:
+        exit_json_err({'error': 'no_such_instance',
+                       'node_id': node_id})
+
+    if node.destroy():
+        exit_success({})
+    else:
+        exit_json_err({'error': 'false_returned'})
 
 
 def create_security_group(conn, params):
@@ -117,7 +131,11 @@ def delete_security_group_by_name(conn, params):
                        'group_name': sec_group_name})
         else:
             raise
-    exit_success({'success': success})
+
+    if success:
+        exit_success({})
+    else:
+        exit_json_err({'error': 'false_returned'})
 
 
 def get_key_pair(conn, params):

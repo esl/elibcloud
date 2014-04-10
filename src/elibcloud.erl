@@ -7,7 +7,8 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([create_instance/9,
+-export([create_instance/7,
+         destroy_instance/4,
          get_key_pair/4,
          import_key_pair_from_string/5,
          delete_key_pair/4,
@@ -26,6 +27,12 @@
                    | integer()
                    | float()
                    | binary().
+
+-type elibcloud_func_result(ErrorAtoms) ::
+          {'ok', json_term()} |
+          {error, {ErrorAtom :: ErrorAtoms,
+                   Details :: json_term()}} |
+          {'error', string()}.
 
 %%%=============================================================================
 %%% External functions
@@ -49,13 +56,12 @@
                       NodeName   :: string() | binary(),
                       SizeId     :: string() | binary(),
                       ImageId    :: string() | binary(),
-                      PubKeyName :: string() | binary(),
-                      PubKeyData :: string() | binary(),
-                      Firewalls  :: [string() | binary()]) ->
-          {'ok', json_term()} |
-          {'error', string()}.
+                      KeyName    :: string() | binary()) ->
+          elibcloud_func_result(no_such_size |
+                                no_such_image |
+                                no_such_key).
 create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
-                PubKeyName, PubKeyData, Firewalls) ->
+                KeyName) ->
 
     lager:debug("Create instance (NodeName=~p)", [NodeName]),
     JsonInput = [{<<"action">>,     <<"create_instance">>},
@@ -65,9 +71,7 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
                  {<<"nodeName">>,   bin(NodeName)},
                  {<<"sizeId">>,     bin(SizeId)},
                  {<<"imageId">>,    bin(ImageId)},
-                 {<<"pubKeyName">>, bin(PubKeyName)},
-                 {<<"pubKeyData">>, bin(PubKeyData)},
-                 {<<"firewalls">>,  bin_list(Firewalls)}],
+                 {<<"keyName">>,    bin(KeyName)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
@@ -77,6 +81,38 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
         {error, String} = Error ->
             lager:debug("Instance creation error (NodeName=~p): ~p",
                         [NodeName, String]),
+            Error
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Destroy a virtual machine instance in the cloud.
+%%
+%% In case of success, the result is an empty JSON object.
+%%
+%% @end
+%%------------------------------------------------------------------------------
+-spec destroy_instance(Provider   :: string() | binary(),
+                       UserName   :: string() | binary(),
+                       Password   :: string() | binary(),
+                       NodeId     :: string() | binary()) ->
+          elibcloud_func_result(no_such_instance).
+destroy_instance(Provider, UserName, Password, NodeId) ->
+
+    lager:debug("Destroy instance (NodeId=~p)", [NodeId]),
+    JsonInput = [{<<"action">>,     <<"destroy_instance">>},
+                 {<<"provider">>,   bin(Provider)},
+                 {<<"userName">>,   bin(UserName)},
+                 {<<"password">>,   bin(Password)},
+                 {<<"nodeId">>,     bin(NodeId)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            lager:debug("Instance destroyed successfully (NodeId=~p)",
+                        [NodeId]),
+            {ok, JsonRes};
+        {error, String} = Error ->
+            lager:debug("Instance destruction error (NodeId=~p): ~p",
+                        [NodeId, String]),
             Error
     end.
 
@@ -99,10 +135,7 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
                    UserName    :: string() | binary(),
                    Password    :: string() | binary(),
                    KeyName     :: string() | binary()) ->
-          {'ok', json_term()} |
-          {error, {ErrorAtom :: no_such_key,
-                   Details :: json_term()}} |
-          {'error', string()}.
+          elibcloud_func_result(no_such_key).
 get_key_pair(Provider, UserName, Password, KeyName) ->
     JsonInput = [{<<"action">>,      <<"get_key_pair">>},
                  {<<"provider">>,    bin(Provider)},
@@ -133,10 +166,7 @@ get_key_pair(Provider, UserName, Password, KeyName) ->
                                   Password    :: string() | binary(),
                                   KeyName     :: string() | binary(),
                                   KeyMaterial :: string() | binary()) ->
-          {'ok', json_term()} |
-          {error, {ErrorAtom :: key_already_exists,
-                   Details :: json_term()}} |
-          {'error', string()}.
+          elibcloud_func_result(key_already_exists).
 import_key_pair_from_string(Provider, UserName, Password, KeyName,
                             KeyMaterial) ->
 
@@ -171,10 +201,7 @@ import_key_pair_from_string(Provider, UserName, Password, KeyName,
                       UserName    :: string() | binary(),
                       Password    :: string() | binary(),
                       KeyName     :: string() | binary()) ->
-          {'ok', json_term()} |
-          {error, {ErrorAtom :: no_such_key,
-                   Details :: json_term()}} |
-          {'error', string()}.
+          elibcloud_func_result(no_such_key).
 delete_key_pair(Provider, UserName, Password, KeyName) ->
     JsonInput = [{<<"action">>,      <<"delete_key_pair">>},
                  {<<"provider">>,    bin(Provider)},
@@ -234,12 +261,7 @@ create_security_group(Provider, UserName, Password, SecurityGroupName,
 %%------------------------------------------------------------------------------
 %% @doc Delete a security group.
 %%
-%% Contents of the result in case of success:
-%%
-%% <ul>
-%% <li>`<<"success">> :: bool()'</li>
-%% </li>
-%% </ul>
+%% In case of success, the result is an empty JSON object.
 %% @end
 %%------------------------------------------------------------------------------
 -spec delete_security_group_by_name(Provider          :: string() | binary(),
@@ -346,8 +368,8 @@ command_loop(Port, Acc) ->
              end
      end.
 
-bin_list(Strings) ->
-    [bin(String) || String <- Strings].
+%% bin_list(Strings) ->
+%%     [bin(String) || String <- Strings].
 
 bin(Bin) when is_binary(Bin) ->
     Bin;

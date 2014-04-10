@@ -10,53 +10,55 @@
 -include_lib("eunit/include/eunit.hrl").
 
 create_instance_test() ->
-    {ok, Res} = elibcloud:create_instance(
-                  _Provider = "DUMMY",
-                  _UserName = "my_username",
-                  _Password = "my_password",
-                  _NodeName = "my_nodename",
-                  _SizeId = "1",
-                  _ImageId = "1",
-                  _PubKeyName = "my_pubkey_name",
-                  _PubKeyData = "my_pubkey_data",
-                  _Firewalls = []),
-    ?assertMatch([{<<"debug">>, _},
-                  {<<"id">>, _NodeId},
-                  {<<"publicIps">>, [<<"127.0.0.3">>]}], lists:sort(Res)),
-    [_Debug,
-     {<<"id">>, NodeId},
-     _PublicIPs] = lists:sort(Res),
+    Res = elibcloud:create_instance(
+            _Provider = "DUMMY",
+            _UserName = "my_username",
+            _Password = "my_password",
+            _NodeName = "my_nodename",
+            _SizeId = "1",
+            _ImageId = "1",
+            _KeyName = "my_key_name"),
+
+    ?assertMatch({ok, _Json}, Res),
+    {ok, Json} = Res,
+
+    ?assertMatch([{<<"id">>, _NodeId},
+                  {<<"publicIps">>, [<<"127.0.0.3">>]}], lists:sort(Json)),
+    [{<<"id">>, NodeId}, _PublicIPs] = lists:sort(Json),
+
     ?assert(is_binary(NodeId)).
 
 create_instance_no_such_size_test() ->
-    {error, Output} = elibcloud:create_instance(
-                        _Provider = "DUMMY",
-                        _UserName = "my_username",
-                        _Password = "my_password",
-                        _NodeName = "my_nodename",
-                        _SizeId = "my_sizeid",
-                        _ImageId = "my_imageid",
-                        _PubKeyName = "my_pubkey_name",
-                        _PubKeyData = "my_pubkey_data",
-                        _Firewalls = []),
-    ?assertEqual(
-       "No such size: my_sizeid\n",
-       lists:flatten(Output)).
+    Res = elibcloud:create_instance(
+            _Provider = "DUMMY",
+            _UserName = "my_username",
+            _Password = "my_password",
+            _NodeName = "my_nodename",
+            _SizeId = "my_sizeid",
+            _ImageId = "my_imageid",
+            _KeyName = "my_key_name"),
+
+    ?assertMatch({error, {no_such_size, _Details}}, Res),
+    {error, {no_such_size, Details}} = Res,
+
+    ?assertMatch([{<<"error">>, <<"no_such_size">>},
+                  {<<"size_id">>, <<"my_sizeid">>}], lists:sort(Details)).
 
 create_instance_no_such_image_test() ->
-    {error, Output} = elibcloud:create_instance(
-                        _Provider = "DUMMY",
-                        _UserName = "my_username",
-                        _Password = "my_password",
-                        _NodeName = "my_nodename",
-                        _SizeId = "1",
-                        _ImageId = "my_imageid",
-                        _PubKeyName = "my_pubkey_name",
-                        _PubKeyData = "my_pubkey_data",
-                        _Firewalls = []),
-    ?assertEqual(
-       "No such image: my_imageid\n",
-       lists:flatten(Output)).
+    Res = elibcloud:create_instance(
+            _Provider = "DUMMY",
+            _UserName = "my_username",
+            _Password = "my_password",
+            _NodeName = "my_nodename",
+            _SizeId = "1",
+            _ImageId = "my_imageid",
+            _KeyName = "my_key_name"),
+
+    ?assertMatch({error, {no_such_image, _Details}}, Res),
+    {error, {no_such_image, Details}} = Res,
+
+    ?assertMatch([{<<"error">>, <<"no_such_image">>},
+                  {<<"image_id">>, <<"my_imageid">>}], lists:sort(Details)).
 
 my_test_() ->
     {setup,
