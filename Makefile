@@ -1,7 +1,7 @@
 APPS = kernel stdlib sasl erts ssl tools os_mon runtime_tools crypto inets \
 	public_key mnesia syntax_tools compiler
 COMBO_PLT = $(HOME)/.riak_core_combo_dialyzer_plt
-.PHONY: all compile deps test clean distclean
+.PHONY: all compile deps test eunit clean distclean
 
 all: compile
 
@@ -10,6 +10,8 @@ compile:
 
 deps:
 	./rebar get-deps
+
+eunit: test
 
 test: compile
 	./rebar eunit skip_deps=true
