@@ -55,7 +55,8 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
                 PubKeyName, PubKeyData, Firewalls) ->
 
     lager:debug("Create instance (NodeName=~p)", [NodeName]),
-    JsonInput = [{<<"provider">>,   bin(Provider)},
+    JsonInput = [{<<"action">>,     <<"create_instance">>},
+                 {<<"provider">>,   bin(Provider)},
                  {<<"userName">>,   bin(UserName)},
                  {<<"password">>,   bin(Password)},
                  {<<"nodeName">>,   bin(NodeName)},
@@ -65,7 +66,7 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
                  {<<"pubKeyData">>, bin(PubKeyData)},
                  {<<"firewalls">>,  bin_list(Firewalls)}],
 
-    case run_script("create_instance", JsonInput) of
+    case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             lager:debug("Instance created successfully (NodeName=~p)",
                         [NodeName]),
@@ -99,14 +100,14 @@ create_security_group(Provider, UserName, Password, SecurityGroupName,
                       Description) ->
 
     lager:debug("Create security group (Name=~p)", [SecurityGroupName]),
-    JsonInput = [{<<"action">>,            <<"create">>},
+    JsonInput = [{<<"action">>,            <<"create_security_group">>},
                  {<<"provider">>,          bin(Provider)},
                  {<<"userName">>,          bin(UserName)},
                  {<<"password">>,          bin(Password)},
                  {<<"securityGroupName">>, bin(SecurityGroupName)},
                  {<<"description">>,       bin(Description)}],
 
-    case run_script("manage_security_group", JsonInput) of
+    case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             lager:debug("Security group created successfully (Name=~p)",
                         [SecurityGroupName]),
@@ -140,13 +141,13 @@ delete_security_group_by_name(Provider, UserName, Password,
                               SecurityGroupName) ->
 
     lager:debug("Delete security group (Name=~p)", [SecurityGroupName]),
-    JsonInput = [{<<"action">>,            <<"delete_by_name">>},
+    JsonInput = [{<<"action">>,            <<"delete_security_group_by_name">>},
                  {<<"provider">>,          bin(Provider)},
                  {<<"userName">>,          bin(UserName)},
                  {<<"password">>,          bin(Password)},
                  {<<"securityGroupName">>, bin(SecurityGroupName)}],
 
-    case run_script("manage_security_group", JsonInput) of
+    case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             lager:debug("Security group created successfully (Name=~p)",
                         [SecurityGroupName]),
@@ -163,13 +164,15 @@ delete_security_group_by_name(Provider, UserName, Password,
 
 %% TODO We should not send all input parameter as an argument, because they
 %% contain sensitive data (like the password)
--spec run_script(Script :: string(),
-                 JsonInput :: json_term()) -> {ok, json_term()} |
-                                              {error, {atom(), json_term()}} |
-                                              {error, string()}.
-run_script(Script, JsonInput) ->
+-spec libcloud_wrapper(JsonInput :: json_term()) ->
+          {ok, json_term()} |
+          {error, {atom(), json_term()}} |
+          {error, string()}.
+libcloud_wrapper(JsonInput) ->
     JsonTextInput = jsx:encode(JsonInput),
-    {Ret, Output} = command(get_script(Script), [JsonTextInput]),
+    Script = filename:join([code:priv_dir(elibcloud),
+                            "libcloud_wrapper.py"]),
+    {Ret, Output} = command(Script, [JsonTextInput]),
     case Ret of
         0 ->
             % JSON printed at the Python side
@@ -229,12 +232,6 @@ command_loop(Port, Acc) ->
                      {Ret, lists:reverse(Acc)}
              end
      end.
-
--spec get_script(string()) -> FullPath :: string().
-get_script(Script) ->
-    filename:join([code:priv_dir(elibcloud),
-                   "libcloud_wrappers",
-                   Script ++ ".py"]).
 
 bin_list(Strings) ->
     [bin(String) || String <- Strings].
