@@ -7,7 +7,7 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([create_instance/8]).
+-export([create_instance/9]).
 
 %%------------------------------------------------------------------------------
 %% Types
@@ -31,35 +31,42 @@
 %%
 %% <ul>
 %% <li>`<<"id">> :: binary()' - The node ID.</li>
+%% <li>`<<"publicIps">> :: [binary()]' - The public IP addresses of the node.
+%% </li>
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
--spec create_instance(Provider  :: string() | binary(),
-                      UserName  :: string() | binary(),
-                      Password  :: string() | binary(),
-                      NodeName  :: string() | binary(),
-                      SizeId    :: string() | binary(),
-                      ImageId   :: string() | binary(),
-                      PubKeyId  :: string() | binary(),
-                      Firewalls :: [string() | binary()]) ->
+-spec create_instance(Provider   :: string() | binary(),
+                      UserName   :: string() | binary(),
+                      Password   :: string() | binary(),
+                      NodeName   :: string() | binary(),
+                      SizeId     :: string() | binary(),
+                      ImageId    :: string() | binary(),
+                      PubKeyName :: string() | binary(),
+                      PubKeyData :: string() | binary(),
+                      Firewalls  :: [string() | binary()]) ->
           {'ok', json_term()} |
           {'error', string()}.
 create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
-                PubKeyId, Firewalls) ->
+                PubKeyName, PubKeyData, Firewalls) ->
 
-    JsonInput = [{<<"provider">>,  bin(Provider)},
-                 {<<"userName">>,  bin(UserName)},
-                 {<<"password">>,  bin(Password)},
-                 {<<"nodeName">>,  bin(NodeName)},
-                 {<<"sizeId">>,    bin(SizeId)},
-                 {<<"imageId">>,   bin(ImageId)},
-                 {<<"pubKeyId">>,  bin(PubKeyId)},
-                 {<<"firewalls">>, bin_list(Firewalls)}],
+    lager:debug("Create instance"),
+    JsonInput = [{<<"provider">>,   bin(Provider)},
+                 {<<"userName">>,   bin(UserName)},
+                 {<<"password">>,   bin(Password)},
+                 {<<"nodeName">>,   bin(NodeName)},
+                 {<<"sizeId">>,     bin(SizeId)},
+                 {<<"imageId">>,    bin(ImageId)},
+                 {<<"pubKeyName">>, bin(PubKeyName)},
+                 {<<"pubKeyData">>, bin(PubKeyData)},
+                 {<<"firewalls">>,  bin_list(Firewalls)}],
 
     case run_script("create_instance", JsonInput) of
         {ok, JsonRes} ->
+            lager:debug("Instance created successfully"),
             {ok, JsonRes};
-        {error, _String} = Error ->
+        {error, String} = Error ->
+            lager:debug("Instance creation error: ~p", [String]),
             Error
     end.
 
@@ -95,10 +102,13 @@ run_script(Script, JsonInput) ->
           {ExitCode :: integer(),
            Output :: iodata()}.
 command(Cmd, Args) ->
-     Opts = [stream, exit_status, use_stdio, stderr_to_stdout, in, eof,
-             {args, Args}],
-     Port = open_port({spawn_executable, Cmd}, Opts),
-     command_loop(Port, []).
+    lager:debug("Run command (Cmd=~p, Args=~p)", [Cmd, Args]),
+    Opts = [stream, exit_status, use_stdio, stderr_to_stdout, in, eof,
+            {args, Args}],
+    Port = open_port({spawn_executable, Cmd}, Opts),
+    {Ret, Output} = command_loop(Port, []),
+    lager:debug("Command finished (Ret=~p, Output=~p)", [Ret, Output]),
+    {Ret, Output}.
 
 command_loop(Port, Acc) ->
      receive

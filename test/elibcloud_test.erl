@@ -17,10 +17,15 @@ create_instance_test() ->
                   _NodeName = "my_nodename",
                   _SizeId = "1",
                   _ImageId = "1",
-                  _PubKeyId = "my_pubkey",
+                  _PubKeyName = "my_pubkey_name",
+                  _PubKeyData = "my_pubkey_data",
                   _Firewalls = []),
-    ?assertMatch([{<<"id">>, _NodeId}], Res),
-    [{<<"id">>, NodeId}] = Res,
+    ?assertMatch([{<<"debug">>, _},
+                  {<<"id">>, _NodeId},
+                  {<<"publicIps">>, [<<"127.0.0.3">>]}], lists:sort(Res)),
+    [_Debug,
+     {<<"id">>, NodeId},
+     _PublicIPs] = lists:sort(Res),
     ?assert(is_binary(NodeId)).
 
 create_instance_no_such_size_test() ->
@@ -31,7 +36,8 @@ create_instance_no_such_size_test() ->
                         _NodeName = "my_nodename",
                         _SizeId = "my_sizeid",
                         _ImageId = "my_imageid",
-                        _PubKeyId = "my_pubkey",
+                        _PubKeyName = "my_pubkey_name",
+                        _PubKeyData = "my_pubkey_data",
                         _Firewalls = []),
     ?assertEqual(
        "No such size: my_sizeid\n",
@@ -45,7 +51,8 @@ create_instance_no_such_image_test() ->
                         _NodeName = "my_nodename",
                         _SizeId = "1",
                         _ImageId = "my_imageid",
-                        _PubKeyId = "my_pubkey",
+                        _PubKeyName = "my_pubkey_name",
+                        _PubKeyData = "my_pubkey_data",
                         _Firewalls = []),
     ?assertEqual(
        "No such image: my_imageid\n",
