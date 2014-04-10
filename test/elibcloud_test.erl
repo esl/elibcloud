@@ -60,6 +60,29 @@ create_instance_no_such_image_test() ->
     ?assertMatch([{<<"error">>, <<"no_such_image">>},
                   {<<"image_id">>, <<"my_imageid">>}], lists:sort(Details)).
 
+destroy_instance_test() ->
+
+    Res = elibcloud:destroy_instance(
+            _Provider = "DUMMY",
+            _UserName = "my_username",
+            _Password = "my_password",
+            _NodeId = "1"),
+
+    ?assertMatch({ok, [{}]}, Res).
+
+destroy_non_existent_instance_test() ->
+    Res = elibcloud:destroy_instance(
+            _Provider = "DUMMY",
+            _UserName = "my_username",
+            _Password = "my_password",
+            _NodeId = "my_nodeid"),
+
+    ?assertMatch({error, {no_such_instance, _Details}}, Res),
+    {error, {no_such_instance, Details}} = Res,
+
+    ?assertMatch([{<<"error">>, <<"no_such_instance">>},
+                  {<<"node_id">>, <<"my_nodeid">>}], lists:sort(Details)).
+
 my_test_() ->
     {setup,
      fun setup/0,
