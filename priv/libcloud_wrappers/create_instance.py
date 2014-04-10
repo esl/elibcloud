@@ -48,8 +48,8 @@ try:
                                        key_material=pub_key_data)
 except Exception as e:
     # If the key already exists, that is fine
-    if e.args[0].find('InvalidKeyPair.Duplicate') == -1:
-        raise e
+    if 'InvalidKeyPair.Duplicate' in e.args[0]:
+        raise
 
 node = driver.create_node(name=node_name, size=size, image=image,
                           ex_keyname=pub_key_name)

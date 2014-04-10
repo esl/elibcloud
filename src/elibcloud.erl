@@ -7,7 +7,9 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([create_instance/9]).
+-export([create_instance/9,
+         create_security_group/5,
+         delete_security_group_by_name/4]).
 
 %%------------------------------------------------------------------------------
 %% Types
@@ -27,7 +29,9 @@
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Creates a virtual machine instance in the cloud.
+%% @doc Create a virtual machine instance in the cloud.
+%%
+%% Contents of the result in case of success:
 %%
 %% <ul>
 %% <li>`<<"id">> :: binary()' - The node ID.</li>
@@ -50,7 +54,7 @@
 create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
                 PubKeyName, PubKeyData, Firewalls) ->
 
-    lager:debug("Create instance"),
+    lager:debug("Create instance (NodeName=~p)", [NodeName]),
     JsonInput = [{<<"provider">>,   bin(Provider)},
                  {<<"userName">>,   bin(UserName)},
                  {<<"password">>,   bin(Password)},
@@ -63,11 +67,94 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
 
     case run_script("create_instance", JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Instance created successfully"),
+            lager:debug("Instance created successfully (NodeName=~p)",
+                        [NodeName]),
             {ok, JsonRes};
         {error, String} = Error ->
-            lager:debug("Instance creation error: ~p", [String]),
+            lager:debug("Instance creation error (NodeName=~p): ~p",
+                        [NodeName, String]),
             Error
+    end.
+%%------------------------------------------------------------------------------
+%% @doc Create a security group.
+%%
+%% Contents of the result in case of success:
+%%
+%% <ul>
+%% <li>`<<"group_id">> :: binary()' - The ID of the security group.</li>
+%% </li>
+%% </ul>
+%% @end
+%%------------------------------------------------------------------------------
+-spec create_security_group(Provider          :: string() | binary(),
+                            UserName          :: string() | binary(),
+                            Password          :: string() | binary(),
+                            SecurityGroupName :: string() | binary(),
+                            Description       :: string() | binary()) ->
+          {'ok', json_term()} |
+          {error, {ErrorAtom :: group_already_exists,
+                   Details :: json_term()}} |
+          {'error', string()}.
+create_security_group(Provider, UserName, Password, SecurityGroupName,
+                      Description) ->
+
+    lager:debug("Create security group (Name=~p)", [SecurityGroupName]),
+    JsonInput = [{<<"action">>,            <<"create">>},
+                 {<<"provider">>,          bin(Provider)},
+                 {<<"userName">>,          bin(UserName)},
+                 {<<"password">>,          bin(Password)},
+                 {<<"securityGroupName">>, bin(SecurityGroupName)},
+                 {<<"description">>,       bin(Description)}],
+
+    case run_script("manage_security_group", JsonInput) of
+        {ok, JsonRes} ->
+            lager:debug("Security group created successfully (Name=~p)",
+                        [SecurityGroupName]),
+            {ok, JsonRes};
+        {error, String} = Error ->
+            lager:debug("Security group creation error (Name=~p): ~p",
+                        [SecurityGroupName, String]),
+            Error
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Delete a security group.
+%%
+%% Contents of the result in case of success:
+%%
+%% <ul>
+%% <li>`<<"success">> :: bool()'</li>
+%% </li>
+%% </ul>
+%% @end
+%%------------------------------------------------------------------------------
+-spec delete_security_group_by_name(Provider          :: string() | binary(),
+                                    UserName          :: string() | binary(),
+                                    Password          :: string() | binary(),
+                                    SecurityGroupName :: string() | binary()) ->
+          {ok, json_term()} |
+          {error, {ErrorAtom :: no_such_group,
+                   Details :: json_term()}} |
+          {error, string()}.
+delete_security_group_by_name(Provider, UserName, Password,
+                              SecurityGroupName) ->
+
+    lager:debug("Delete security group (Name=~p)", [SecurityGroupName]),
+    JsonInput = [{<<"action">>,            <<"delete_by_name">>},
+                 {<<"provider">>,          bin(Provider)},
+                 {<<"userName">>,          bin(UserName)},
+                 {<<"password">>,          bin(Password)},
+                 {<<"securityGroupName">>, bin(SecurityGroupName)}],
+
+    case run_script("manage_security_group", JsonInput) of
+        {ok, JsonRes} ->
+            lager:debug("Security group created successfully (Name=~p)",
+                        [SecurityGroupName]),
+            {ok, JsonRes};
+        {error, Error} ->
+            lager:debug("Security group creation error (Name=~p): ~p",
+                        [SecurityGroupName, Error]),
+            {error, Error}
     end.
 
 %%%=============================================================================
@@ -78,15 +165,36 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
 %% contain sensitive data (like the password)
 -spec run_script(Script :: string(),
                  JsonInput :: json_term()) -> {ok, json_term()} |
+                                              {error, {atom(), json_term()}} |
                                               {error, string()}.
 run_script(Script, JsonInput) ->
     JsonTextInput = jsx:encode(JsonInput),
     {Ret, Output} = command(get_script(Script), [JsonTextInput]),
     case Ret of
         0 ->
+            % JSON printed at the Python side
             {ok, jsx:decode(list_to_binary(Output))};
-        _ ->
-            {error, Output}
+        1 ->
+            % Python exception not caught -> string output
+            {error, Output};
+        2 ->
+            % Error string printed at the Python side
+            {error, Output};
+        3 ->
+            % Error JSON printed at the Python side
+            case jsx:decode(list_to_binary(Output)) of
+                {incomplete, _} ->
+                    {error, "Incomplete JSON: " ++ Output};
+                JsonError ->
+                    ErrorAtom =
+                        case lists:keyfind(<<"error">>, 1, JsonError) of
+                            {_, ErrorBin} ->
+                                list_to_atom(binary_to_list(ErrorBin));
+                            false ->
+                                error_field_missing
+                        end,
+                    {error, {ErrorAtom, JsonError}}
+            end
     end.
 
 %%------------------------------------------------------------------------------
