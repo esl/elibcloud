@@ -100,44 +100,6 @@ def destroy_instance(conn, params):
         exit_json_err({'error': 'false_returned'})
 
 
-def create_security_group(conn, params):
-    """Create a security group."""
-
-    sec_group_descr = params['description']
-    sec_group_name = params['securityGroupName']
-
-    try:
-        group = conn.ex_create_security_group(name=sec_group_name,
-                                              description=sec_group_descr)
-    except Exception as e:
-        if 'InvalidGroup.Duplicate' in e.args[0]:
-            exit_json_err({'error': 'group_already_exists',
-                           'group_name': sec_group_name})
-        else:
-            raise
-    exit_success({'group_id': group['group_id']})
-
-
-def delete_security_group_by_name(conn, params):
-    """Delete a security group."""
-
-    sec_group_name = params['securityGroupName']
-
-    try:
-        success = conn.ex_delete_security_group_by_name(group_name=sec_group_name)
-    except Exception as e:
-        if 'InvalidGroup.NotFound' in e.args[0]:
-            exit_json_err({'error': 'no_such_group',
-                       'group_name': sec_group_name})
-        else:
-            raise
-
-    if success:
-        exit_success({})
-    else:
-        exit_json_err({'error': 'false_returned'})
-
-
 def get_key_pair(conn, params):
     """Get a key pair."""
 
@@ -191,6 +153,44 @@ def delete_key_pair(conn, params):
                        'key_name': key_name})
 
     exit_success({})
+
+
+def create_security_group(conn, params):
+    """Create a security group."""
+
+    sec_group_descr = params['description']
+    sec_group_name = params['securityGroupName']
+
+    try:
+        group = conn.ex_create_security_group(name=sec_group_name,
+                                              description=sec_group_descr)
+    except Exception as e:
+        if 'InvalidGroup.Duplicate' in e.args[0]:
+            exit_json_err({'error': 'group_already_exists',
+                           'group_name': sec_group_name})
+        else:
+            raise
+    exit_success({'group_id': group['group_id']})
+
+
+def delete_security_group_by_name(conn, params):
+    """Delete a security group."""
+
+    sec_group_name = params['securityGroupName']
+
+    try:
+        success = conn.ex_delete_security_group_by_name(group_name=sec_group_name)
+    except Exception as e:
+        if 'InvalidGroup.NotFound' in e.args[0]:
+            exit_json_err({'error': 'no_such_group',
+                       'group_name': sec_group_name})
+        else:
+            raise
+
+    if success:
+        exit_success({})
+    else:
+        exit_json_err({'error': 'false_returned'})
 
 
 def connect(params):
