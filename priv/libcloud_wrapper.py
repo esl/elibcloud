@@ -6,7 +6,10 @@ import sys
 import json
 import time
 
-from libcloud.compute.types import Provider, KeyPairDoesNotExistError
+from libcloud.compute.types import Provider
+from libcloud.compute.types import KeyPairDoesNotExistError
+from libcloud.compute.types import NodeState
+from libcloud.compute.base import Node, NodeSize, NodeImage
 from libcloud.compute.providers import get_driver
 
 
@@ -28,11 +31,90 @@ def exit_json_err(result):
     sys.exit(3)
 
 
+##### Converter functions #####
+
+
+def jf(obj):
+    """Return the JSON-friendly (hence "jf") version of the object."""
+    if obj is None:
+        return None
+    elif isinstance(obj, str):
+        return obj
+    elif isinstance(obj, bytes):
+        return obj.decode('utf-8')
+    elif isinstance(obj, int):
+        return obj
+    elif isinstance(obj, float):
+        return obj
+    elif isinstance(obj, list):
+        return [jf(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {jf(key): jf(value)
+                for key, value in obj.items()}
+    elif isinstance(obj, NodeSize):
+        return size_to_jf(obj)
+    elif isinstance(obj, NodeImage):
+        return image_to_jf(obj)
+    elif isinstance(obj, Node):
+        return node_to_jf(obj)
+    else:
+        return str(obj)
+
+
+def size_to_jf(size):
+    return {'id':        jf(size.id),
+            'name':      jf(size.name),
+            'ram':       jf(size.ram),
+            'disk':      jf(size.disk),
+            'bandwidth': jf(size.bandwidth),
+            'price':     jf(size.price),
+            'extra':     jf(size.extra)}
+
+
+def image_to_jf(image):
+    return {'id':    jf(image.id),
+            'name':  jf(image.name),
+            'extra': jf(image.extra)}
+
+
+def state_to_jf(state):
+    for state_name in ('RUNNING',
+                       'REBOOTING',
+                       'TERMINATED',
+                       'PENDING',
+                       'UNKNOWN',
+                       'STOPPED'):
+        if state == getattr(NodeState, state_name):
+            return state_name
+    return 'UNKNOWN'
+
+
+def node_to_jf(node):
+    d = {'id':          jf(node.id),
+         'name':        jf(node.name),
+         'state':       state_to_jf(node.state),
+         'public_ips':  jf(node.public_ips),
+         'private_ips': jf(node.private_ips),
+         'extra':       jf(node.extra)}
+    if hasattr(node, 'size'):
+        d['size'] = jf(node.size)
+    if hasattr(node, 'image'):
+        d['image'] = jf(node.image)
+    return d
+
+
 ##### Business logic functions #####
 
 
+def list_instances(conn, params):
+    """List all instances."""
+
+    nodes = conn.list_nodes()
+    exit_success({'nodes': [jf(node) for node in nodes]})
+
+
 def create_instance(conn, params):
-    """Create a virtual machine instance in the cloud."""
+    """Create a virtual machine instance."""
 
     node_name = params['nodeName']
     size_id = params['sizeId']
@@ -91,7 +173,7 @@ def create_instance(conn, params):
 
 
 def destroy_instance(conn, params):
-    """Destroy a virtual machine instance in the cloud."""
+    """Destroy a virtual machine instance."""
 
     node_id = params['nodeId']
 

@@ -7,7 +7,8 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([create_instance/8,
+-export([list_instances/3,
+         create_instance/8,
          destroy_instance/4,
          get_key_pair/4,
          import_key_pair_from_string/5,
@@ -44,7 +45,46 @@
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc Create a virtual machine instance in the cloud.
+%% @doc List virtual machine instances.
+%%
+%% In case of success, the result is a JSON list containins JSON objects (once
+%% JSON object = one instance). The JSON objects contain the following fields:
+%%
+%% <ul>
+%% <li>`<<"id">>': Node ID.</li>
+%% <li>`<<"name">>': Node Name.</li>
+%% <li>`<<"state">>' (`"RUNNING" | "REBOOTING" | "TERMINATED" | "PENDING" |
+%% "UNKNOWN" | "STOPPED"'): Node State</li>
+%% <li>`<<"public_ips">>': Public IP addresses associated with this node.</li>
+%% <li>`<<"private_ips">>': Private IP addresses associated with this node.</li>
+%% <li>`<<"image">>': Size of this node. (optional)</li>
+%% <li>`<<"size">>': Image of this node. (optional)</li>
+%% <li>`<<"extra">>': Optional provider specific attributes associated with this
+%% node.</li>
+%% </ul>
+%%
+%% @end
+%%------------------------------------------------------------------------------
+-spec list_instances(Provider   :: string() | binary(),
+                     UserName   :: string() | binary(),
+                     Password   :: string() | binary()) ->
+          elibcloud_func_result(no_predefined_error).
+list_instances(Provider, UserName, Password) ->
+
+    JsonInput = [{<<"action">>,     <<"list_instances">>},
+                 {<<"provider">>,   bin(Provider)},
+                 {<<"userName">>,   bin(UserName)},
+                 {<<"password">>,   bin(Password)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            {ok, JsonRes};
+        {error, _} = Error ->
+            Error
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Create a virtual machine instance.
 %%
 %% Contents of the result in case of success:
 %%
@@ -93,7 +133,7 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Destroy a virtual machine instance in the cloud.
+%% @doc Destroy a virtual machine instance.
 %%
 %% In case of success, the result is an empty JSON object.
 %%
