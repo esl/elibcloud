@@ -17,7 +17,8 @@ create_instance_test() ->
             _NodeName = "my_nodename",
             _SizeId = "1",
             _ImageId = "1",
-            _KeyName = "my_key_name"),
+            _KeyName = "my_key_name",
+            _SecurityGroupNames = []),
 
     ?assertMatch({ok, _Json}, Res),
     {ok, Json} = Res,
@@ -36,7 +37,8 @@ create_instance_no_such_size_test() ->
             _NodeName = "my_nodename",
             _SizeId = "my_sizeid",
             _ImageId = "my_imageid",
-            _KeyName = "my_key_name"),
+            _KeyName = "my_key_name",
+            _SecurityGroupNames = []),
 
     ?assertMatch({error, {no_such_size, _Details}}, Res),
     {error, {no_such_size, Details}} = Res,
@@ -52,7 +54,8 @@ create_instance_no_such_image_test() ->
             _NodeName = "my_nodename",
             _SizeId = "1",
             _ImageId = "my_imageid",
-            _KeyName = "my_key_name"),
+            _KeyName = "my_key_name",
+            _SecurityGroupNames = []),
 
     ?assertMatch({error, {no_such_image, _Details}}, Res),
     {error, {no_such_image, Details}} = Res,

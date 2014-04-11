@@ -38,6 +38,7 @@ def create_instance(conn, params):
     size_id = params['sizeId']
     image_id = params['imageId']
     key_name = params['keyName']
+    sec_group_names = params['securityGroupNames']
 
     # Get size
     sizes = conn.list_sizes()
@@ -58,10 +59,17 @@ def create_instance(conn, params):
     # Create node
     try:
         node = conn.create_node(name=node_name, size=size, image=image,
-                                ex_keyname=key_name)
+                                ex_keyname=key_name,
+                                ex_security_groups=sec_group_names)
     except KeyPairDoesNotExistError:
         exit_json_err({'error': 'no_such_key',
                        'key_name': key_name})
+    except Exception as e:
+        if 'InvalidGroup.NotFound' in e.args[0]:
+            exit_json_err({'error': 'no_such_group',
+                           'group_names': sec_group_names})
+        else:
+            raise
 
     if params.get('waitUntilRunning'):
         booting_time = params.get('bootingTime', 0)
@@ -183,7 +191,7 @@ def delete_security_group_by_name(conn, params):
     except Exception as e:
         if 'InvalidGroup.NotFound' in e.args[0]:
             exit_json_err({'error': 'no_such_group',
-                       'group_name': sec_group_name})
+                           'group_name': sec_group_name})
         else:
             raise
 
@@ -191,6 +199,32 @@ def delete_security_group_by_name(conn, params):
         exit_success({})
     else:
         exit_json_err({'error': 'false_returned'})
+
+
+def create_security_rules(conn, params):
+    """Add a rules a security group."""
+
+    sec_group_name = params['securityGroupName']
+
+    # Rule example: {'protocol': 'tcp', 'from_port': 22, 'to_port': 22}
+    sec_rules = params['rules']
+
+    try:
+        f = conn.ex_authorize_security_group_ingress
+        for rule in sec_rules:
+            success = f(sec_group_name,
+                        from_port=rule['from_port'],
+                        to_port=rule['to_port'],
+                        protocol=rule['protocol'])
+            if not success:
+                exit_json_err({'error': 'false_returned'})
+    except Exception as e:
+        if 'InvalidGroup.NotFound' in e.args[0]:
+            exit_json_err({'error': 'no_such_group',
+                           'group_name': sec_group_name})
+        else:
+            raise
+    exit_success({})
 
 
 def connect(params):

@@ -7,13 +7,14 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([create_instance/7,
+-export([create_instance/8,
          destroy_instance/4,
          get_key_pair/4,
          import_key_pair_from_string/5,
          delete_key_pair/4,
          create_security_group/5,
-         delete_security_group_by_name/4]).
+         delete_security_group_by_name/4,
+         create_security_rules/5]).
 
 %%------------------------------------------------------------------------------
 %% Types
@@ -33,6 +34,10 @@
           {error, {ErrorAtom :: ErrorAtoms,
                    Details :: json_term()}} |
           {'error', string()}.
+
+-type security_rule() :: {FromPort :: integer(),
+                          ToPort :: integer(),
+                          Port :: tcp | udp | icmp}.
 
 %%%=============================================================================
 %%% External functions
@@ -56,22 +61,25 @@
                       NodeName   :: string() | binary(),
                       SizeId     :: string() | binary(),
                       ImageId    :: string() | binary(),
-                      KeyName    :: string() | binary()) ->
+                      KeyName    :: string() | binary(),
+                      SecurityGroupNames :: [string() | binary()]) ->
           elibcloud_func_result(no_such_size |
                                 no_such_image |
-                                no_such_key).
+                                no_such_key |
+                                no_such_group).
 create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
-                KeyName) ->
+                KeyName, SecurityGroupNames) ->
 
     lager:debug("Create instance (NodeName=~p)", [NodeName]),
-    JsonInput = [{<<"action">>,     <<"create_instance">>},
-                 {<<"provider">>,   bin(Provider)},
-                 {<<"userName">>,   bin(UserName)},
-                 {<<"password">>,   bin(Password)},
-                 {<<"nodeName">>,   bin(NodeName)},
-                 {<<"sizeId">>,     bin(SizeId)},
-                 {<<"imageId">>,    bin(ImageId)},
-                 {<<"keyName">>,    bin(KeyName)}],
+    JsonInput = [{<<"action">>,             <<"create_instance">>},
+                 {<<"provider">>,           bin(Provider)},
+                 {<<"userName">>,           bin(UserName)},
+                 {<<"password">>,           bin(Password)},
+                 {<<"nodeName">>,           bin(NodeName)},
+                 {<<"sizeId">>,             bin(SizeId)},
+                 {<<"imageId">>,            bin(ImageId)},
+                 {<<"keyName">>,            bin(KeyName)},
+                 {<<"securityGroupNames">>, bin_list(SecurityGroupNames)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
@@ -232,10 +240,7 @@ delete_key_pair(Provider, UserName, Password, KeyName) ->
                             Password          :: string() | binary(),
                             SecurityGroupName :: string() | binary(),
                             Description       :: string() | binary()) ->
-          {'ok', json_term()} |
-          {error, {ErrorAtom :: group_already_exists,
-                   Details :: json_term()}} |
-          {'error', string()}.
+          elibcloud_func_result(group_already_exists).
 create_security_group(Provider, UserName, Password, SecurityGroupName,
                       Description) ->
 
@@ -268,10 +273,7 @@ create_security_group(Provider, UserName, Password, SecurityGroupName,
                                     UserName          :: string() | binary(),
                                     Password          :: string() | binary(),
                                     SecurityGroupName :: string() | binary()) ->
-          {ok, json_term()} |
-          {error, {ErrorAtom :: no_such_group,
-                   Details :: json_term()}} |
-          {error, string()}.
+          elibcloud_func_result(no_such_group).
 delete_security_group_by_name(Provider, UserName, Password,
                               SecurityGroupName) ->
 
@@ -289,6 +291,43 @@ delete_security_group_by_name(Provider, UserName, Password,
             {ok, JsonRes};
         {error, Error} ->
             lager:debug("Security group creation error (Name=~p): ~p",
+                        [SecurityGroupName, Error]),
+            {error, Error}
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Add a rule to a security group.
+%%
+%% In case of success, the result is an empty JSON object.
+%%
+%% @end
+%%------------------------------------------------------------------------------
+-spec create_security_rules(Provider          :: string() | binary(),
+                            UserName          :: string() | binary(),
+                            Password          :: string() | binary(),
+                            SecurityGroupName :: string() | binary(),
+                            Rules             :: [security_rule()]) ->
+          elibcloud_func_result(no_such_group).
+create_security_rules(Provider, UserName, Password, SecurityGroupName,
+                      Rules) ->
+
+    lager:debug("Create security rule (SecurityGroupName=~p)",
+                [SecurityGroupName]),
+    JsonInput = [{<<"action">>,            <<"create_security_rules">>},
+                 {<<"provider">>,          bin(Provider)},
+                 {<<"userName">>,          bin(UserName)},
+                 {<<"password">>,          bin(Password)},
+                 {<<"securityGroupName">>, bin(SecurityGroupName)},
+                 {<<"rules">>,             security_rules_to_json(Rules)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            lager:debug("Security rule created successfully "
+                        "(SecurityGroupName=~p)", [SecurityGroupName]),
+            {ok, JsonRes};
+        {error, Error} ->
+            lager:debug("Security rule creation error "
+                        "(SecurityGroupName=~p): ~p",
                         [SecurityGroupName, Error]),
             {error, Error}
     end.
@@ -368,8 +407,26 @@ command_loop(Port, Acc) ->
              end
      end.
 
-%% bin_list(Strings) ->
-%%     [bin(String) || String <- Strings].
+-spec security_rules_to_json([security_rule()]) -> json_term().
+security_rules_to_json([]) ->
+    [];
+security_rules_to_json([Rule|Rules]) ->
+    [security_rule_to_json(Rule)|security_rules_to_json(Rules)].
+
+-spec security_rule_to_json(security_rule()) -> json_term().
+security_rule_to_json({FromPort, ToPort, Protocol}) ->
+    [{<<"from_port">>, FromPort},
+     {<<"to_port">>, ToPort},
+     {<<"protocol">>, protocol_to_bin(Protocol)}].
+
+-spec protocol_to_bin(atom()) -> binary().
+protocol_to_bin(Protocol) when Protocol =:= tcp;
+                               Protocol =:= udp;
+                               Protocol =:= icmp ->
+    list_to_binary(atom_to_list(Protocol)).
+
+bin_list(Strings) ->
+    [bin(String) || String <- Strings].
 
 bin(Bin) when is_binary(Bin) ->
     Bin;
