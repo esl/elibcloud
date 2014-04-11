@@ -273,7 +273,8 @@ create_security_group(Provider, UserName, Password, SecurityGroupName,
                                     UserName          :: string() | binary(),
                                     Password          :: string() | binary(),
                                     SecurityGroupName :: string() | binary()) ->
-          elibcloud_func_result(no_such_group).
+          elibcloud_func_result(no_such_group |
+                                group_in_use).
 delete_security_group_by_name(Provider, UserName, Password,
                               SecurityGroupName) ->
 

@@ -192,6 +192,9 @@ def delete_security_group_by_name(conn, params):
         if 'InvalidGroup.NotFound' in e.args[0]:
             exit_json_err({'error': 'no_such_group',
                            'group_name': sec_group_name})
+        elif 'InvalidGroup.InUse' in e.args[0]:
+            exit_json_err({'error': 'group_in_use',
+                           'group_name': sec_group_name})
         else:
             raise
 
