@@ -13,6 +13,7 @@
          destroy_instance/4,
          get_key_pair/4,
          import_key_pair_from_string/5,
+         import_key_pair_from_file/5,
          delete_key_pair/4,
          list_security_groups/3,
          create_security_group/5,
@@ -214,7 +215,6 @@ destroy_instance(Provider, UserName, Password, NodeId) ->
 %% <li>`<<"public_key">> :: binary()'</li>
 %% <li>`<<"private_key">> :: binary()'</li>
 %% <li>`<<"extra">> :: term()'</li>
-%% </li>
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
@@ -252,7 +252,7 @@ get_key_pair(Provider, UserName, Password, KeyName) ->
 import_key_pair_from_string(Provider, UserName, Password, KeyName,
                             KeyMaterial) ->
 
-    lager:debug("Import key pair from string (KeyName=~p)", [KeyName]),
+    lager:debug("Import key pair (KeyName=~p)", [KeyName]),
     JsonInput = [{<<"action">>,      <<"import_key_pair_from_string">>},
                  {<<"provider">>,    bin(Provider)},
                  {<<"userName">>,    bin(UserName)},
@@ -272,11 +272,38 @@ import_key_pair_from_string(Provider, UserName, Password, KeyName,
     end.
 
 %%------------------------------------------------------------------------------
+%% @doc Import a key pair from a file.
+%%
+%% In case of success, the result is an empty JSON object.
+%% @end
+%%------------------------------------------------------------------------------
+-spec import_key_pair_from_file(Provider :: string() | binary(),
+                                UserName :: string() | binary(),
+                                Password :: string() | binary(),
+                                KeyName  :: string() | binary(),
+                                FileName :: string() | binary()) ->
+          elibcloud_func_result(key_already_exists |
+                                file_read_error).
+import_key_pair_from_file(Provider, UserName, Password, KeyName, FileName) ->
+
+    case file:read_file(FileName) of
+        {ok, KeyMaterial} ->
+            import_key_pair_from_string(Provider, UserName, Password,
+                                        KeyName, KeyMaterial);
+        {error, Reason} ->
+            lager:debug("Key pair import error (KeyName=~p, FileName=~p): ~p",
+                        [KeyName, FileName, Reason]),
+            Details = [{<<"reason">>, Reason},
+                       {<<"keyName">>, KeyName},
+                       {<<"fileName">>, FileName}],
+            {error, {file_read_error, Details}}
+    end.
+
+%%------------------------------------------------------------------------------
 %% @doc Delete a key pair.
 %%
 %% In case of success, the result is an empty JSON object.
 %%
-%% <ul>
 %% @end
 %%------------------------------------------------------------------------------
 -spec delete_key_pair(Provider    :: string() | binary(),
@@ -332,7 +359,6 @@ list_security_groups(Provider, UserName, Password) ->
 %%
 %% <ul>
 %% <li>`<<"group_id">> :: binary()' - The ID of the security group.</li>
-%% </li>
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
