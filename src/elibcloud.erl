@@ -14,6 +14,7 @@
          get_key_pair/4,
          import_key_pair_from_string/5,
          delete_key_pair/4,
+         list_security_groups/3,
          create_security_group/5,
          delete_security_group_by_name/4,
          create_security_rules/5]).
@@ -239,12 +240,7 @@ get_key_pair(Provider, UserName, Password, KeyName) ->
 %%------------------------------------------------------------------------------
 %% @doc Import a key pair from a string.
 %%
-%% Contents of the result in case of success:
-%%
-%% <ul>
-%% <li>`<<"group_id">> :: binary()' - The ID of the security group.</li>
-%% </li>
-%% </ul>
+%% In case of success, the result is an empty JSON object.
 %% @end
 %%------------------------------------------------------------------------------
 -spec import_key_pair_from_string(Provider    :: string() | binary(),
@@ -300,6 +296,33 @@ delete_key_pair(Provider, UserName, Password, KeyName) ->
             {ok, JsonRes};
         {error, Error} ->
             {error, Error}
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc List security group names.
+%%
+%% In case of success, the result contains a list containing the names of the
+%% security groups as binaries.
+%%
+%% @end
+%%------------------------------------------------------------------------------
+-spec list_security_groups(Provider   :: string() | binary(),
+                           UserName   :: string() | binary(),
+                           Password   :: string() | binary()) ->
+          {ok, [SecGroupName :: binary()]} |
+          elibcloud_func_result(no_predefined_error).
+list_security_groups(Provider, UserName, Password) ->
+
+    JsonInput = [{<<"action">>,     <<"list_security_groups">>},
+                 {<<"provider">>,   bin(Provider)},
+                 {<<"userName">>,   bin(UserName)},
+                 {<<"password">>,   bin(Password)}],
+
+    case libcloud_wrapper(JsonInput) of
+        {ok, JsonRes} ->
+            {ok, JsonRes};
+        {error, _} = Error ->
+            Error
     end.
 
 %%------------------------------------------------------------------------------

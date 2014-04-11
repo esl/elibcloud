@@ -110,7 +110,7 @@ def list_instances(conn, params):
     """List all instances."""
 
     nodes = conn.list_nodes()
-    exit_success([jf(node) for node in nodes])
+    exit_success(jf(nodes))
 
 
 def create_instance(conn, params):
@@ -243,6 +243,13 @@ def delete_key_pair(conn, params):
                        'key_name': key_name})
 
     exit_success({})
+
+
+def list_security_groups(conn, params):
+    """List all security groups."""
+
+    sec_groups = conn.ex_list_security_groups()
+    exit_success(jf(sec_groups))
 
 
 def create_security_group(conn, params):
