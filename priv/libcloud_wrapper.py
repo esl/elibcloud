@@ -110,7 +110,7 @@ def list_instances(conn, params):
     """List all instances."""
 
     nodes = conn.list_nodes()
-    exit_success({'nodes': [jf(node) for node in nodes]})
+    exit_success([jf(node) for node in nodes])
 
 
 def create_instance(conn, params):

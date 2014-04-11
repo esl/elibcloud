@@ -7,7 +7,8 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([list_instances/3,
+-export([get_instance/4,
+         list_instances/3,
          create_instance/8,
          destroy_instance/4,
          get_key_pair/4,
@@ -81,6 +82,43 @@ list_instances(Provider, UserName, Password) ->
             {ok, JsonRes};
         {error, _} = Error ->
             Error
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Get a virtual machine instance.
+%%
+%% In case of success, the result is an empty JSON object.
+%%
+%% @end
+%%------------------------------------------------------------------------------
+-spec get_instance(Provider   :: string() | binary(),
+                   UserName   :: string() | binary(),
+                   Password   :: string() | binary(),
+                   NodeId     :: string() | binary()) ->
+          elibcloud_func_result(no_such_instance).
+get_instance(Provider, UserName, Password, NodeId) ->
+
+    BinNodeId = bin(NodeId),
+    case list_instances(Provider, UserName, Password) of
+        {ok, Instances} ->
+            MatchingInstances =
+                [Instance
+                 || Instance <- Instances,
+                    lists:keyfind(<<"id">>, 1, Instance) =:=
+                        {<<"id">>, BinNodeId}],
+
+            case MatchingInstances of
+                [] ->
+                    {error, {no_such_instance, [{<<"id">>, BinNodeId}]}};
+                [Instance] ->
+                    Instance;
+                _ when is_list(MatchingInstances) ->
+                    % This can happen only if the cloud provider is buggy,
+                    % that's why it is not reported in the type spec.
+                    {error, {multiple_instances, [{<<"id">>, BinNodeId}]}}
+            end;
+        {error, Error} ->
+            {error, Error}
     end.
 
 %%------------------------------------------------------------------------------
