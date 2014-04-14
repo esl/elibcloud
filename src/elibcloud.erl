@@ -87,8 +87,9 @@ list_nodes({Provider, UserName, Password}) ->
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             {ok, JsonRes};
-        {error, _} = Error ->
-            Error
+        {error, Error} ->
+            lager:debug("Node listing error: ~p", [Error]),
+            {error, Error}
     end.
 
 %%------------------------------------------------------------------------------
@@ -113,15 +114,19 @@ get_node(Credentials, NodeId) ->
 
             case MatchingNodes of
                 [] ->
+                    lager:debug("Node getting error (NodeId=~p): no such node"),
                     {error, {no_such_node, [{<<"id">>, BinNodeId}]}};
                 [Node] ->
                     Node;
                 _ when is_list(MatchingNodes) ->
                     % This can happen only if the cloud provider is buggy,
                     % that's why it is not reported in the type spec.
+                    lager:debug("Node getting error (NodeId=~p): multiple "
+                                "nodes"),
                     {error, {multiple_nodes, [{<<"id">>, BinNodeId}]}}
             end;
         {error, Error} ->
+            % debug log printed by list_nodes call
             {error, Error}
     end.
 
@@ -229,6 +234,7 @@ get_key_pair({Provider, UserName, Password}, KeyName) ->
         {ok, JsonRes} ->
             {ok, JsonRes};
         {error, Error} ->
+            lager:debug("Get key pair error: ~p", [Error]),
             {error, Error}
     end.
 
@@ -310,6 +316,7 @@ delete_key_pair({Provider, UserName, Password}, KeyName) ->
         {ok, JsonRes} ->
             {ok, JsonRes};
         {error, Error} ->
+            lager:debug("Delete key pair error: ~p", [Error]),
             {error, Error}
     end.
 
@@ -334,8 +341,9 @@ list_security_groups({Provider, UserName, Password}) ->
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             {ok, JsonRes};
-        {error, _} = Error ->
-            Error
+        {error, Error} ->
+            lager:debug("Security group listing error: ~p", [Error]),
+            {error, Error}
     end.
 
 %%------------------------------------------------------------------------------
