@@ -2,15 +2,31 @@
 
 # Copyright (C) 2014, Erlang Solutions Ltd
 
-import sys
 import json
+import socket
+import sys
 import time
 
 from libcloud.compute.types import Provider
-from libcloud.compute.types import KeyPairDoesNotExistError
+from libcloud.compute.types import KeyPairDoesNotExistError, InvalidCredsError
 from libcloud.compute.types import NodeState
 from libcloud.compute.base import Node, NodeSize, NodeImage
 from libcloud.compute.providers import get_driver
+
+
+##### Helper functions #####
+
+
+def is_exception(e, string):
+    """Check if the given exception is a known Libcloud exception with the
+    given content."""
+
+    try:
+        if string in e.args[0]:
+            return True
+    except Exception:
+        pass
+    return False
 
 
 ##### Exit functions #####
@@ -147,7 +163,7 @@ def create_node(conn, params):
         exit_json_err({'error': 'no_such_key',
                        'key_name': key_name})
     except Exception as e:
-        if 'InvalidGroup.NotFound' in e.args[0]:
+        if is_exception(e, 'InvalidGroup.NotFound'):
             exit_json_err({'error': 'no_such_group',
                            'group_names': sec_group_names})
         else:
@@ -220,7 +236,7 @@ def import_key_pair_from_string(conn, params):
         key_pair = conn.import_key_pair_from_string(name=key_name,
                                                     key_material=key_material)
     except Exception as e:
-        if 'InvalidKeyPair.Duplicate' in e.args[0]:
+        if is_exception(e, 'InvalidKeyPair.Duplicate'):
             exit_json_err({'error': 'key_already_exists',
                            'key_name': key_name})
         else:
@@ -262,7 +278,7 @@ def create_security_group(conn, params):
         group = conn.ex_create_security_group(name=sec_group_name,
                                               description=sec_group_descr)
     except Exception as e:
-        if 'InvalidGroup.Duplicate' in e.args[0]:
+        if is_exception(e, 'InvalidGroup.Duplicate'):
             exit_json_err({'error': 'group_already_exists',
                            'group_name': sec_group_name})
         else:
@@ -278,10 +294,10 @@ def delete_security_group_by_name(conn, params):
     try:
         success = conn.ex_delete_security_group_by_name(group_name=sec_group_name)
     except Exception as e:
-        if 'InvalidGroup.NotFound' in e.args[0]:
+        if is_exception(e, 'InvalidGroup.NotFound'):
             exit_json_err({'error': 'no_such_group',
                            'group_name': sec_group_name})
-        elif 'InvalidGroup.InUse' in e.args[0]:
+        elif is_exception(e, 'InvalidGroup.InUse'):
             exit_json_err({'error': 'group_in_use',
                            'group_name': sec_group_name})
         else:
@@ -311,7 +327,7 @@ def create_security_rules(conn, params):
             if not success:
                 exit_json_err({'error': 'false_returned'})
     except Exception as e:
-        if 'InvalidGroup.NotFound' in e.args[0]:
+        if is_exception(e, 'InvalidGroup.NotFound'):
             exit_json_err({'error': 'no_such_group',
                            'group_name': sec_group_name})
         else:
@@ -350,4 +366,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except InvalidCredsError:
+        exit_json_err({'error': 'invalid_creds_error'})
+    except socket.gaierror as e:
+        exit_json_err({'error': 'socket_error',
+                       'details': str(e)})

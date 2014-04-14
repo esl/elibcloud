@@ -35,7 +35,9 @@
 
 -type elibcloud_func_result(ErrorAtoms) ::
           {'ok', json_term()} |
-          {error, {ErrorAtom :: ErrorAtoms,
+          {error, {ErrorAtom :: invalid_creds_error |
+                                socket_error |
+                                ErrorAtoms,
                    Details   :: json_term()}} |
           {'error', string()}.
 
