@@ -36,17 +36,17 @@
 -type elibcloud_func_result(ErrorAtoms) ::
           {'ok', json_term()} |
           {error, {ErrorAtom :: ErrorAtoms,
-                   Details :: json_term()}} |
+                   Details   :: json_term()}} |
           {'error', string()}.
 
 -type security_rule() :: {FromPort :: integer(),
-                          ToPort :: integer(),
-                          Port :: tcp | udp | icmp}.
+                          ToPort   :: integer(),
+                          Port     :: tcp | udp | icmp}.
 
 %% Supported provider: "EC2".
--type credentials() :: {Provider   :: string() | binary(),
-                        UserName   :: string() | binary(),
-                        Password   :: string() | binary()}.
+-type credentials() :: {Provider :: string() | binary(),
+                        UserName :: string() | binary(),
+                        Password :: string() | binary()}.
 
 -export_type([credentials/0]).
 
@@ -79,10 +79,10 @@
           elibcloud_func_result(no_predefined_error).
 list_nodes({Provider, UserName, Password}) ->
 
-    JsonInput = [{<<"action">>,     <<"list_nodes">>},
-                 {<<"provider">>,   bin(Provider)},
-                 {<<"userName">>,   bin(UserName)},
-                 {<<"password">>,   bin(Password)}],
+    JsonInput = [{<<"action">>,   <<"list_nodes">>},
+                 {<<"provider">>, bin(Provider)},
+                 {<<"userName">>, bin(UserName)},
+                 {<<"password">>, bin(Password)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
@@ -99,7 +99,7 @@ list_nodes({Provider, UserName, Password}) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec get_node(Credentials :: credentials(),
-                   NodeId      :: string() | binary()) ->
+               NodeId      :: string() | binary()) ->
           elibcloud_func_result(no_such_node).
 get_node(Credentials, NodeId) ->
 
@@ -107,10 +107,9 @@ get_node(Credentials, NodeId) ->
     case list_nodes(Credentials) of
         {ok, Nodes} ->
             MatchingNodes =
-                [Node
-                 || Node <- Nodes,
-                    lists:keyfind(<<"id">>, 1, Node) =:=
-                        {<<"id">>, BinNodeId}],
+                [Node || Node <- Nodes,
+                         lists:keyfind(<<"id">>, 1, Node) =:=
+                             {<<"id">>, BinNodeId}],
 
             case MatchingNodes of
                 [] ->
@@ -139,17 +138,17 @@ get_node(Credentials, NodeId) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec create_node(Credentials        :: credentials(),
-                      NodeName           :: string() | binary(),
-                      SizeId             :: string() | binary(),
-                      ImageId            :: string() | binary(),
-                      KeyName            :: string() | binary(),
-                      SecurityGroupNames :: [string() | binary()]) ->
+                  NodeName           :: string() | binary(),
+                  SizeId             :: string() | binary(),
+                  ImageId            :: string() | binary(),
+                  KeyName            :: string() | binary(),
+                  SecurityGroupNames :: [string() | binary()]) ->
           elibcloud_func_result(no_such_size |
                                 no_such_image |
                                 no_such_key |
                                 no_such_group).
-create_node({Provider, UserName, Password}, NodeName, SizeId, ImageId,
-                KeyName, SecurityGroupNames) ->
+create_node({Provider, UserName, Password}, NodeName, SizeId, ImageId, KeyName,
+            SecurityGroupNames) ->
 
     lager:debug("Create node (NodeName=~p)", [NodeName]),
     JsonInput = [{<<"action">>,             <<"create_node">>},
@@ -164,8 +163,7 @@ create_node({Provider, UserName, Password}, NodeName, SizeId, ImageId,
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Node created successfully (NodeName=~p)",
-                        [NodeName]),
+            lager:debug("Node created successfully (NodeName=~p)", [NodeName]),
             {ok, JsonRes};
         {error, String} = Error ->
             lager:debug("Node creation error (NodeName=~p): ~p",
@@ -221,11 +219,11 @@ destroy_node({Provider, UserName, Password}, NodeId) ->
                    KeyName     :: string() | binary()) ->
           elibcloud_func_result(no_such_key).
 get_key_pair({Provider, UserName, Password}, KeyName) ->
-    JsonInput = [{<<"action">>,      <<"get_key_pair">>},
-                 {<<"provider">>,    bin(Provider)},
-                 {<<"userName">>,    bin(UserName)},
-                 {<<"password">>,    bin(Password)},
-                 {<<"keyName">>,     bin(KeyName)}],
+    JsonInput = [{<<"action">>,   <<"get_key_pair">>},
+                 {<<"provider">>, bin(Provider)},
+                 {<<"userName">>, bin(UserName)},
+                 {<<"password">>, bin(Password)},
+                 {<<"keyName">>,  bin(KeyName)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
@@ -302,11 +300,11 @@ import_key_pair_from_file(Credentials, KeyName, FileName) ->
                       KeyName     :: string() | binary()) ->
           elibcloud_func_result(no_such_key).
 delete_key_pair({Provider, UserName, Password}, KeyName) ->
-    JsonInput = [{<<"action">>,      <<"delete_key_pair">>},
-                 {<<"provider">>,    bin(Provider)},
-                 {<<"userName">>,    bin(UserName)},
-                 {<<"password">>,    bin(Password)},
-                 {<<"keyName">>,     bin(KeyName)}],
+    JsonInput = [{<<"action">>,   <<"delete_key_pair">>},
+                 {<<"provider">>, bin(Provider)},
+                 {<<"userName">>, bin(UserName)},
+                 {<<"password">>, bin(Password)},
+                 {<<"keyName">>,  bin(KeyName)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
