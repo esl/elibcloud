@@ -11,9 +11,7 @@
 
 create_instance_test() ->
     Res = elibcloud:create_instance(
-            _Provider = "DUMMY",
-            _UserName = "my_username",
-            _Password = "my_password",
+            _Credentials = credentials(),
             _NodeName = "my_nodename",
             _SizeId = "1",
             _ImageId = "1",
@@ -31,9 +29,7 @@ create_instance_test() ->
 
 create_instance_no_such_size_test() ->
     Res = elibcloud:create_instance(
-            _Provider = "DUMMY",
-            _UserName = "my_username",
-            _Password = "my_password",
+            _Credentials = credentials(),
             _NodeName = "my_nodename",
             _SizeId = "my_sizeid",
             _ImageId = "my_imageid",
@@ -48,9 +44,7 @@ create_instance_no_such_size_test() ->
 
 create_instance_no_such_image_test() ->
     Res = elibcloud:create_instance(
-            _Provider = "DUMMY",
-            _UserName = "my_username",
-            _Password = "my_password",
+            _Credentials = credentials(),
             _NodeName = "my_nodename",
             _SizeId = "1",
             _ImageId = "my_imageid",
@@ -66,18 +60,14 @@ create_instance_no_such_image_test() ->
 destroy_instance_test() ->
 
     Res = elibcloud:destroy_instance(
-            _Provider = "DUMMY",
-            _UserName = "my_username",
-            _Password = "my_password",
+            _Credentials = credentials(),
             _NodeId = "1"),
 
     ?assertMatch({ok, [{}]}, Res).
 
 destroy_non_existent_instance_test() ->
     Res = elibcloud:destroy_instance(
-            _Provider = "DUMMY",
-            _UserName = "my_username",
-            _Password = "my_password",
+            _Credentials = credentials(),
             _NodeId = "my_nodeid"),
 
     ?assertMatch({error, {no_such_instance, _Details}}, Res),
@@ -102,3 +92,8 @@ teardown(_) ->
 
 empty() ->
     ?_assertMatch(ok, ok).
+
+credentials() ->
+    {_Provider = "DUMMY",
+     _UserName = "my_username",
+     _Password = "my_password"}.

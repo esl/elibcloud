@@ -7,18 +7,18 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([get_instance/4,
-         list_instances/3,
-         create_instance/8,
-         destroy_instance/4,
-         get_key_pair/4,
-         import_key_pair_from_string/5,
-         import_key_pair_from_file/5,
-         delete_key_pair/4,
-         list_security_groups/3,
-         create_security_group/5,
-         delete_security_group_by_name/4,
-         create_security_rules/5]).
+-export([get_instance/2,
+         list_instances/1,
+         create_instance/6,
+         destroy_instance/2,
+         get_key_pair/2,
+         import_key_pair_from_string/3,
+         import_key_pair_from_file/3,
+         delete_key_pair/2,
+         list_security_groups/1,
+         create_security_group/3,
+         delete_security_group_by_name/2,
+         create_security_rules/3]).
 
 %%------------------------------------------------------------------------------
 %% Types
@@ -42,6 +42,11 @@
 -type security_rule() :: {FromPort :: integer(),
                           ToPort :: integer(),
                           Port :: tcp | udp | icmp}.
+
+%% Supported provider: "EC2".
+-type credentials() :: {Provider   :: string() | binary(),
+                        UserName   :: string() | binary(),
+                        Password   :: string() | binary()}.
 
 %%%=============================================================================
 %%% External functions
@@ -68,11 +73,9 @@
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec list_instances(Provider   :: string() | binary(),
-                     UserName   :: string() | binary(),
-                     Password   :: string() | binary()) ->
+-spec list_instances(Credentials :: credentials()) ->
           elibcloud_func_result(no_predefined_error).
-list_instances(Provider, UserName, Password) ->
+list_instances({Provider, UserName, Password}) ->
 
     JsonInput = [{<<"action">>,     <<"list_instances">>},
                  {<<"provider">>,   bin(Provider)},
@@ -93,15 +96,13 @@ list_instances(Provider, UserName, Password) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec get_instance(Provider   :: string() | binary(),
-                   UserName   :: string() | binary(),
-                   Password   :: string() | binary(),
-                   NodeId     :: string() | binary()) ->
+-spec get_instance(Credentials :: credentials(),
+                   NodeId      :: string() | binary()) ->
           elibcloud_func_result(no_such_instance).
-get_instance(Provider, UserName, Password, NodeId) ->
+get_instance(Credentials, NodeId) ->
 
     BinNodeId = bin(NodeId),
-    case list_instances(Provider, UserName, Password) of
+    case list_instances(Credentials) of
         {ok, Instances} ->
             MatchingInstances =
                 [Instance
@@ -135,19 +136,17 @@ get_instance(Provider, UserName, Password, NodeId) ->
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
--spec create_instance(Provider   :: string() | binary(),
-                      UserName   :: string() | binary(),
-                      Password   :: string() | binary(),
-                      NodeName   :: string() | binary(),
-                      SizeId     :: string() | binary(),
-                      ImageId    :: string() | binary(),
-                      KeyName    :: string() | binary(),
+-spec create_instance(Credentials        :: credentials(),
+                      NodeName           :: string() | binary(),
+                      SizeId             :: string() | binary(),
+                      ImageId            :: string() | binary(),
+                      KeyName            :: string() | binary(),
                       SecurityGroupNames :: [string() | binary()]) ->
           elibcloud_func_result(no_such_size |
                                 no_such_image |
                                 no_such_key |
                                 no_such_group).
-create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
+create_instance({Provider, UserName, Password}, NodeName, SizeId, ImageId,
                 KeyName, SecurityGroupNames) ->
 
     lager:debug("Create instance (NodeName=~p)", [NodeName]),
@@ -179,12 +178,10 @@ create_instance(Provider, UserName, Password, NodeName, SizeId, ImageId,
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec destroy_instance(Provider   :: string() | binary(),
-                       UserName   :: string() | binary(),
-                       Password   :: string() | binary(),
-                       NodeId     :: string() | binary()) ->
+-spec destroy_instance(Credentials :: credentials(),
+                       NodeId      :: string() | binary()) ->
           elibcloud_func_result(no_such_instance).
-destroy_instance(Provider, UserName, Password, NodeId) ->
+destroy_instance({Provider, UserName, Password}, NodeId) ->
 
     lager:debug("Destroy instance (NodeId=~p)", [NodeId]),
     JsonInput = [{<<"action">>,     <<"destroy_instance">>},
@@ -218,12 +215,10 @@ destroy_instance(Provider, UserName, Password, NodeId) ->
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
--spec get_key_pair(Provider    :: string() | binary(),
-                   UserName    :: string() | binary(),
-                   Password    :: string() | binary(),
+-spec get_key_pair(Credentials :: credentials(),
                    KeyName     :: string() | binary()) ->
           elibcloud_func_result(no_such_key).
-get_key_pair(Provider, UserName, Password, KeyName) ->
+get_key_pair({Provider, UserName, Password}, KeyName) ->
     JsonInput = [{<<"action">>,      <<"get_key_pair">>},
                  {<<"provider">>,    bin(Provider)},
                  {<<"userName">>,    bin(UserName)},
@@ -243,13 +238,11 @@ get_key_pair(Provider, UserName, Password, KeyName) ->
 %% In case of success, the result is an empty JSON object.
 %% @end
 %%------------------------------------------------------------------------------
--spec import_key_pair_from_string(Provider    :: string() | binary(),
-                                  UserName    :: string() | binary(),
-                                  Password    :: string() | binary(),
+-spec import_key_pair_from_string(Credentials :: credentials(),
                                   KeyName     :: string() | binary(),
                                   KeyMaterial :: string() | binary()) ->
           elibcloud_func_result(key_already_exists).
-import_key_pair_from_string(Provider, UserName, Password, KeyName,
+import_key_pair_from_string({Provider, UserName, Password}, KeyName,
                             KeyMaterial) ->
 
     lager:debug("Import key pair (KeyName=~p)", [KeyName]),
@@ -277,19 +270,16 @@ import_key_pair_from_string(Provider, UserName, Password, KeyName,
 %% In case of success, the result is an empty JSON object.
 %% @end
 %%------------------------------------------------------------------------------
--spec import_key_pair_from_file(Provider :: string() | binary(),
-                                UserName :: string() | binary(),
-                                Password :: string() | binary(),
-                                KeyName  :: string() | binary(),
-                                FileName :: string() | binary()) ->
+-spec import_key_pair_from_file(Credentials :: credentials(),
+                                KeyName     :: string() | binary(),
+                                FileName    :: string() | binary()) ->
           elibcloud_func_result(key_already_exists |
                                 file_read_error).
-import_key_pair_from_file(Provider, UserName, Password, KeyName, FileName) ->
+import_key_pair_from_file(Credentials, KeyName, FileName) ->
 
     case file:read_file(FileName) of
         {ok, KeyMaterial} ->
-            import_key_pair_from_string(Provider, UserName, Password,
-                                        KeyName, KeyMaterial);
+            import_key_pair_from_string(Credentials, KeyName, KeyMaterial);
         {error, Reason} ->
             lager:debug("Key pair import error (KeyName=~p, FileName=~p): ~p",
                         [KeyName, FileName, Reason]),
@@ -306,12 +296,10 @@ import_key_pair_from_file(Provider, UserName, Password, KeyName, FileName) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec delete_key_pair(Provider    :: string() | binary(),
-                      UserName    :: string() | binary(),
-                      Password    :: string() | binary(),
+-spec delete_key_pair(Credentials :: credentials(),
                       KeyName     :: string() | binary()) ->
           elibcloud_func_result(no_such_key).
-delete_key_pair(Provider, UserName, Password, KeyName) ->
+delete_key_pair({Provider, UserName, Password}, KeyName) ->
     JsonInput = [{<<"action">>,      <<"delete_key_pair">>},
                  {<<"provider">>,    bin(Provider)},
                  {<<"userName">>,    bin(UserName)},
@@ -333,12 +321,10 @@ delete_key_pair(Provider, UserName, Password, KeyName) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec list_security_groups(Provider   :: string() | binary(),
-                           UserName   :: string() | binary(),
-                           Password   :: string() | binary()) ->
+-spec list_security_groups(Credentials :: credentials()) ->
           {ok, [SecGroupName :: binary()]} |
           elibcloud_func_result(no_predefined_error).
-list_security_groups(Provider, UserName, Password) ->
+list_security_groups({Provider, UserName, Password}) ->
 
     JsonInput = [{<<"action">>,     <<"list_security_groups">>},
                  {<<"provider">>,   bin(Provider)},
@@ -362,13 +348,11 @@ list_security_groups(Provider, UserName, Password) ->
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
--spec create_security_group(Provider          :: string() | binary(),
-                            UserName          :: string() | binary(),
-                            Password          :: string() | binary(),
+-spec create_security_group(Credentials       :: credentials(),
                             SecurityGroupName :: string() | binary(),
                             Description       :: string() | binary()) ->
           elibcloud_func_result(group_already_exists).
-create_security_group(Provider, UserName, Password, SecurityGroupName,
+create_security_group({Provider, UserName, Password}, SecurityGroupName,
                       Description) ->
 
     lager:debug("Create security group (Name=~p)", [SecurityGroupName]),
@@ -396,13 +380,11 @@ create_security_group(Provider, UserName, Password, SecurityGroupName,
 %% In case of success, the result is an empty JSON object.
 %% @end
 %%------------------------------------------------------------------------------
--spec delete_security_group_by_name(Provider          :: string() | binary(),
-                                    UserName          :: string() | binary(),
-                                    Password          :: string() | binary(),
+-spec delete_security_group_by_name(Credentials       :: credentials(),
                                     SecurityGroupName :: string() | binary()) ->
           elibcloud_func_result(no_such_group |
                                 group_in_use).
-delete_security_group_by_name(Provider, UserName, Password,
+delete_security_group_by_name({Provider, UserName, Password},
                               SecurityGroupName) ->
 
     lager:debug("Delete security group (Name=~p)", [SecurityGroupName]),
@@ -430,13 +412,11 @@ delete_security_group_by_name(Provider, UserName, Password,
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec create_security_rules(Provider          :: string() | binary(),
-                            UserName          :: string() | binary(),
-                            Password          :: string() | binary(),
+-spec create_security_rules(Credentials       :: credentials(),
                             SecurityGroupName :: string() | binary(),
                             Rules             :: [security_rule()]) ->
           elibcloud_func_result(no_such_group).
-create_security_rules(Provider, UserName, Password, SecurityGroupName,
+create_security_rules({Provider, UserName, Password}, SecurityGroupName,
                       Rules) ->
 
     lager:debug("Create security rule (SecurityGroupName=~p)",
