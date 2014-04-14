@@ -106,15 +106,15 @@ def node_to_jf(node):
 ##### Business logic functions #####
 
 
-def list_instances(conn, params):
-    """List all instances."""
+def list_nodes(conn, params):
+    """List all nodes."""
 
     nodes = conn.list_nodes()
     exit_success(jf(nodes))
 
 
-def create_instance(conn, params):
-    """Create a virtual machine instance."""
+def create_node(conn, params):
+    """Create a virtual machine node."""
 
     node_name = params['nodeName']
     size_id = params['sizeId']
@@ -172,8 +172,8 @@ def create_instance(conn, params):
                   'publicIps': node.public_ips})
 
 
-def destroy_instance(conn, params):
-    """Destroy a virtual machine instance."""
+def destroy_node(conn, params):
+    """Destroy a virtual machine node."""
 
     node_id = params['nodeId']
 
@@ -181,7 +181,7 @@ def destroy_instance(conn, params):
     try:
         node = next(x for x in conn.list_nodes() if x.id == node_id)
     except StopIteration:
-        exit_json_err({'error': 'no_such_instance',
+        exit_json_err({'error': 'no_such_node',
                        'node_id': node_id})
 
     if node.destroy():

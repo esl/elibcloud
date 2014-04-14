@@ -7,10 +7,10 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([get_instance/2,
-         list_instances/1,
-         create_instance/6,
-         destroy_instance/2,
+-export([get_node/2,
+         list_nodes/1,
+         create_node/6,
+         destroy_node/2,
          get_key_pair/2,
          import_key_pair_from_string/3,
          import_key_pair_from_file/3,
@@ -55,10 +55,10 @@
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc List virtual machine instances.
+%% @doc List virtual machine nodes.
 %%
 %% In case of success, the result is a JSON list containins JSON objects (once
-%% JSON object = one instance). The JSON objects contain the following fields:
+%% JSON object = one node). The JSON objects contain the following fields:
 %%
 %% <ul>
 %% <li>`<<"id">>': Node ID.</li>
@@ -75,11 +75,11 @@
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec list_instances(Credentials :: credentials()) ->
+-spec list_nodes(Credentials :: credentials()) ->
           elibcloud_func_result(no_predefined_error).
-list_instances({Provider, UserName, Password}) ->
+list_nodes({Provider, UserName, Password}) ->
 
-    JsonInput = [{<<"action">>,     <<"list_instances">>},
+    JsonInput = [{<<"action">>,     <<"list_nodes">>},
                  {<<"provider">>,   bin(Provider)},
                  {<<"userName">>,   bin(UserName)},
                  {<<"password">>,   bin(Password)}],
@@ -92,42 +92,42 @@ list_instances({Provider, UserName, Password}) ->
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Get a virtual machine instance.
+%% @doc Get a virtual machine node.
 %%
 %% In case of success, the result is an empty JSON object.
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec get_instance(Credentials :: credentials(),
+-spec get_node(Credentials :: credentials(),
                    NodeId      :: string() | binary()) ->
-          elibcloud_func_result(no_such_instance).
-get_instance(Credentials, NodeId) ->
+          elibcloud_func_result(no_such_node).
+get_node(Credentials, NodeId) ->
 
     BinNodeId = bin(NodeId),
-    case list_instances(Credentials) of
-        {ok, Instances} ->
-            MatchingInstances =
-                [Instance
-                 || Instance <- Instances,
-                    lists:keyfind(<<"id">>, 1, Instance) =:=
+    case list_nodes(Credentials) of
+        {ok, Nodes} ->
+            MatchingNodes =
+                [Node
+                 || Node <- Nodes,
+                    lists:keyfind(<<"id">>, 1, Node) =:=
                         {<<"id">>, BinNodeId}],
 
-            case MatchingInstances of
+            case MatchingNodes of
                 [] ->
-                    {error, {no_such_instance, [{<<"id">>, BinNodeId}]}};
-                [Instance] ->
-                    Instance;
-                _ when is_list(MatchingInstances) ->
+                    {error, {no_such_node, [{<<"id">>, BinNodeId}]}};
+                [Node] ->
+                    Node;
+                _ when is_list(MatchingNodes) ->
                     % This can happen only if the cloud provider is buggy,
                     % that's why it is not reported in the type spec.
-                    {error, {multiple_instances, [{<<"id">>, BinNodeId}]}}
+                    {error, {multiple_nodes, [{<<"id">>, BinNodeId}]}}
             end;
         {error, Error} ->
             {error, Error}
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Create a virtual machine instance.
+%% @doc Create a virtual machine node.
 %%
 %% Contents of the result in case of success:
 %%
@@ -138,7 +138,7 @@ get_instance(Credentials, NodeId) ->
 %% </ul>
 %% @end
 %%------------------------------------------------------------------------------
--spec create_instance(Credentials        :: credentials(),
+-spec create_node(Credentials        :: credentials(),
                       NodeName           :: string() | binary(),
                       SizeId             :: string() | binary(),
                       ImageId            :: string() | binary(),
@@ -148,11 +148,11 @@ get_instance(Credentials, NodeId) ->
                                 no_such_image |
                                 no_such_key |
                                 no_such_group).
-create_instance({Provider, UserName, Password}, NodeName, SizeId, ImageId,
+create_node({Provider, UserName, Password}, NodeName, SizeId, ImageId,
                 KeyName, SecurityGroupNames) ->
 
-    lager:debug("Create instance (NodeName=~p)", [NodeName]),
-    JsonInput = [{<<"action">>,             <<"create_instance">>},
+    lager:debug("Create node (NodeName=~p)", [NodeName]),
+    JsonInput = [{<<"action">>,             <<"create_node">>},
                  {<<"provider">>,           bin(Provider)},
                  {<<"userName">>,           bin(UserName)},
                  {<<"password">>,           bin(Password)},
@@ -164,29 +164,29 @@ create_instance({Provider, UserName, Password}, NodeName, SizeId, ImageId,
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Instance created successfully (NodeName=~p)",
+            lager:debug("Node created successfully (NodeName=~p)",
                         [NodeName]),
             {ok, JsonRes};
         {error, String} = Error ->
-            lager:debug("Instance creation error (NodeName=~p): ~p",
+            lager:debug("Node creation error (NodeName=~p): ~p",
                         [NodeName, String]),
             Error
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Destroy a virtual machine instance.
+%% @doc Destroy a virtual machine node.
 %%
 %% In case of success, the result is an empty JSON object.
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec destroy_instance(Credentials :: credentials(),
+-spec destroy_node(Credentials :: credentials(),
                        NodeId      :: string() | binary()) ->
-          elibcloud_func_result(no_such_instance).
-destroy_instance({Provider, UserName, Password}, NodeId) ->
+          elibcloud_func_result(no_such_node).
+destroy_node({Provider, UserName, Password}, NodeId) ->
 
-    lager:debug("Destroy instance (NodeId=~p)", [NodeId]),
-    JsonInput = [{<<"action">>,     <<"destroy_instance">>},
+    lager:debug("Destroy node (NodeId=~p)", [NodeId]),
+    JsonInput = [{<<"action">>,     <<"destroy_node">>},
                  {<<"provider">>,   bin(Provider)},
                  {<<"userName">>,   bin(UserName)},
                  {<<"password">>,   bin(Password)},
@@ -194,11 +194,11 @@ destroy_instance({Provider, UserName, Password}, NodeId) ->
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Instance destroyed successfully (NodeId=~p)",
+            lager:debug("Node destroyed successfully (NodeId=~p)",
                         [NodeId]),
             {ok, JsonRes};
         {error, String} = Error ->
-            lager:debug("Instance destruction error (NodeId=~p): ~p",
+            lager:debug("Node destruction error (NodeId=~p): ~p",
                         [NodeId, String]),
             Error
     end.
