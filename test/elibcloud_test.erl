@@ -9,8 +9,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-create_instance_test() ->
-    Res = elibcloud:create_instance(
+create_node_test() ->
+    Res = elibcloud:create_node(
             _Credentials = credentials(),
             _NodeName = "my_nodename",
             _SizeId = "1",
@@ -27,8 +27,8 @@ create_instance_test() ->
 
     ?assert(is_binary(NodeId)).
 
-create_instance_no_such_size_test() ->
-    Res = elibcloud:create_instance(
+create_node_no_such_size_test() ->
+    Res = elibcloud:create_node(
             _Credentials = credentials(),
             _NodeName = "my_nodename",
             _SizeId = "my_sizeid",
@@ -42,8 +42,8 @@ create_instance_no_such_size_test() ->
     ?assertMatch([{<<"error">>, <<"no_such_size">>},
                   {<<"size_id">>, <<"my_sizeid">>}], lists:sort(Details)).
 
-create_instance_no_such_image_test() ->
-    Res = elibcloud:create_instance(
+create_node_no_such_image_test() ->
+    Res = elibcloud:create_node(
             _Credentials = credentials(),
             _NodeName = "my_nodename",
             _SizeId = "1",
@@ -57,23 +57,23 @@ create_instance_no_such_image_test() ->
     ?assertMatch([{<<"error">>, <<"no_such_image">>},
                   {<<"image_id">>, <<"my_imageid">>}], lists:sort(Details)).
 
-destroy_instance_test() ->
+destroy_node_test() ->
 
-    Res = elibcloud:destroy_instance(
+    Res = elibcloud:destroy_node(
             _Credentials = credentials(),
             _NodeId = "1"),
 
     ?assertMatch({ok, [{}]}, Res).
 
-destroy_non_existent_instance_test() ->
-    Res = elibcloud:destroy_instance(
+destroy_non_existent_node_test() ->
+    Res = elibcloud:destroy_node(
             _Credentials = credentials(),
             _NodeId = "my_nodeid"),
 
-    ?assertMatch({error, {no_such_instance, _Details}}, Res),
-    {error, {no_such_instance, Details}} = Res,
+    ?assertMatch({error, {no_such_node, _Details}}, Res),
+    {error, {no_such_node, Details}} = Res,
 
-    ?assertMatch([{<<"error">>, <<"no_such_instance">>},
+    ?assertMatch([{<<"error">>, <<"no_such_node">>},
                   {<<"node_id">>, <<"my_nodeid">>}], lists:sort(Details)).
 
 my_test_() ->
@@ -94,6 +94,7 @@ empty() ->
     ?_assertMatch(ok, ok).
 
 credentials() ->
-    {_Provider = "DUMMY",
-     _UserName = "my_username",
-     _Password = "my_password"}.
+    {ok, Cred} = elibcloud:create_credentials(_Provider = "DUMMY",
+                                              _UserName = "my_username",
+                                              _Password = "my_password"),
+    Cred.

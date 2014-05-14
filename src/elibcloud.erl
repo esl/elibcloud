@@ -7,7 +7,9 @@
 -module(elibcloud).
 -copyright("2014, Erlang Solutions Ltd.").
 
--export([get_node/2,
+-export([create_credentials/3,
+         create_credentials/4,
+         get_node/2,
          list_nodes/1,
          create_node/6,
          destroy_node/2,
@@ -19,6 +21,14 @@
          create_security_group/3,
          delete_security_group_by_name/2,
          create_security_rules/3]).
+
+-export_type([credentials/0]).
+
+-define(SUPPORTED_PROVIDERS, [<<"EC2">>,
+                              <<"OPENSTACK_HP">>,
+                              <<"OPENSTACK_RACKSPACE">>,
+                              <<"RACKSPACE">>,
+                              <<"DUMMY">>]).
 
 %%------------------------------------------------------------------------------
 %% Types
@@ -37,6 +47,8 @@
           {'ok', json_term()} |
           {error, {ErrorAtom :: invalid_creds_error |
                                 socket_error |
+                                unsupported_provider |
+                                action_not_supported_on_provider |
                                 ErrorAtoms,
                    Details   :: json_term()}} |
           {'error', string()}.
@@ -45,16 +57,44 @@
                           ToPort   :: integer(),
                           Port     :: tcp | udp | icmp}.
 
-%% Supported provider: "EC2".
--type credentials() :: {Provider :: string() | binary(),
-                        UserName :: string() | binary(),
-                        Password :: string() | binary()}.
-
--export_type([credentials/0]).
+-opaque credentials() :: json_term().
 
 %%%=============================================================================
 %%% External functions
 %%%=============================================================================
+
+-spec create_credentials(Provider :: string() | binary(),
+                         UserName :: string() | binary(),
+                         Password :: string() | binary()) ->
+          {ok, credentials()} |
+          {error, {not_supported_provider, binary()}}.
+create_credentials(Provider, UserName, Password) ->
+    create_credentials(Provider, UserName, Password, []).
+
+-spec create_credentials(Provider :: string() | binary(),
+                         UserName :: string() | binary(),
+                         Password :: string() | binary(),
+                         Extra :: []) ->
+          {ok, credentials()} |
+          {error, {not_supported_provider, binary()}}.
+create_credentials(Provider, UserName, Password, Extra) ->
+    BinProv = bin(Provider),
+    ExtraObj =
+        case Extra of
+            [] ->
+                [{}]; % Empty JSON object in JSX
+            _ ->
+                Extra
+        end,
+    case lists:member(BinProv, ?SUPPORTED_PROVIDERS) of
+        true ->
+            {ok, [{<<"provider">>, BinProv},
+                  {<<"userName">>, bin(UserName)},
+                  {<<"password">>, bin(Password)},
+                  {<<"extra">>,    ExtraObj}]};
+        false ->
+            {error, {not_supported_provider, BinProv}}
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc List virtual machine nodes.
@@ -79,12 +119,9 @@
 %%------------------------------------------------------------------------------
 -spec list_nodes(Credentials :: credentials()) ->
           elibcloud_func_result(no_predefined_error).
-list_nodes({Provider, UserName, Password}) ->
-
-    JsonInput = [{<<"action">>,   <<"list_nodes">>},
-                 {<<"provider">>, bin(Provider)},
-                 {<<"userName">>, bin(UserName)},
-                 {<<"password">>, bin(Password)}],
+list_nodes(Credentials) ->
+    JsonInput = Credentials ++
+                [{<<"action">>, <<"list_nodes">>}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
@@ -154,14 +191,12 @@ get_node(Credentials, NodeId) ->
                                 no_such_image |
                                 no_such_key |
                                 no_such_group).
-create_node({Provider, UserName, Password}, NodeName, SizeId, ImageId, KeyName,
+create_node(Credentials, NodeName, SizeId, ImageId, KeyName,
             SecurityGroupNames) ->
 
     lager:debug("Create node (NodeName=~p)", [NodeName]),
-    JsonInput = [{<<"action">>,             <<"create_node">>},
-                 {<<"provider">>,           bin(Provider)},
-                 {<<"userName">>,           bin(UserName)},
-                 {<<"password">>,           bin(Password)},
+    JsonInput = Credentials ++
+                [{<<"action">>,             <<"create_node">>},
                  {<<"nodeName">>,           bin(NodeName)},
                  {<<"sizeId">>,             bin(SizeId)},
                  {<<"imageId">>,            bin(ImageId)},
@@ -188,13 +223,11 @@ create_node({Provider, UserName, Password}, NodeName, SizeId, ImageId, KeyName,
 -spec destroy_node(Credentials :: credentials(),
                        NodeId      :: string() | binary()) ->
           elibcloud_func_result(no_such_node).
-destroy_node({Provider, UserName, Password}, NodeId) ->
+destroy_node(Credentials, NodeId) ->
 
     lager:debug("Destroy node (NodeId=~p)", [NodeId]),
-    JsonInput = [{<<"action">>,     <<"destroy_node">>},
-                 {<<"provider">>,   bin(Provider)},
-                 {<<"userName">>,   bin(UserName)},
-                 {<<"password">>,   bin(Password)},
+    JsonInput = Credentials ++
+                [{<<"action">>,     <<"destroy_node">>},
                  {<<"nodeId">>,     bin(NodeId)}],
 
     case libcloud_wrapper(JsonInput) of
@@ -225,11 +258,9 @@ destroy_node({Provider, UserName, Password}, NodeId) ->
 -spec get_key_pair(Credentials :: credentials(),
                    KeyName     :: string() | binary()) ->
           elibcloud_func_result(no_such_key).
-get_key_pair({Provider, UserName, Password}, KeyName) ->
-    JsonInput = [{<<"action">>,   <<"get_key_pair">>},
-                 {<<"provider">>, bin(Provider)},
-                 {<<"userName">>, bin(UserName)},
-                 {<<"password">>, bin(Password)},
+get_key_pair(Credentials, KeyName) ->
+    JsonInput = Credentials ++
+                [{<<"action">>,   <<"get_key_pair">>},
                  {<<"keyName">>,  bin(KeyName)}],
 
     case libcloud_wrapper(JsonInput) of
@@ -250,14 +281,11 @@ get_key_pair({Provider, UserName, Password}, KeyName) ->
                                   KeyName     :: string() | binary(),
                                   KeyMaterial :: string() | binary()) ->
           elibcloud_func_result(key_already_exists).
-import_key_pair_from_string({Provider, UserName, Password}, KeyName,
-                            KeyMaterial) ->
+import_key_pair_from_string(Credentials, KeyName, KeyMaterial) ->
 
     lager:debug("Import key pair (KeyName=~p)", [KeyName]),
-    JsonInput = [{<<"action">>,      <<"import_key_pair_from_string">>},
-                 {<<"provider">>,    bin(Provider)},
-                 {<<"userName">>,    bin(UserName)},
-                 {<<"password">>,    bin(Password)},
+    JsonInput = Credentials ++
+                [{<<"action">>,      <<"import_key_pair_from_string">>},
                  {<<"keyName">>,     bin(KeyName)},
                  {<<"keyMaterial">>, bin(KeyMaterial)}],
 
@@ -307,11 +335,9 @@ import_key_pair_from_file(Credentials, KeyName, FileName) ->
 -spec delete_key_pair(Credentials :: credentials(),
                       KeyName     :: string() | binary()) ->
           elibcloud_func_result(no_such_key).
-delete_key_pair({Provider, UserName, Password}, KeyName) ->
-    JsonInput = [{<<"action">>,   <<"delete_key_pair">>},
-                 {<<"provider">>, bin(Provider)},
-                 {<<"userName">>, bin(UserName)},
-                 {<<"password">>, bin(Password)},
+delete_key_pair(Credentials, KeyName) ->
+    JsonInput = Credentials ++
+                [{<<"action">>,   <<"delete_key_pair">>},
                  {<<"keyName">>,  bin(KeyName)}],
 
     case libcloud_wrapper(JsonInput) of
@@ -333,12 +359,10 @@ delete_key_pair({Provider, UserName, Password}, KeyName) ->
 -spec list_security_groups(Credentials :: credentials()) ->
           {ok, [SecGroupName :: binary()]} |
           elibcloud_func_result(no_predefined_error).
-list_security_groups({Provider, UserName, Password}) ->
+list_security_groups(Credentials) ->
 
-    JsonInput = [{<<"action">>,     <<"list_security_groups">>},
-                 {<<"provider">>,   bin(Provider)},
-                 {<<"userName">>,   bin(UserName)},
-                 {<<"password">>,   bin(Password)}],
+    JsonInput = Credentials ++
+                [{<<"action">>, <<"list_security_groups">>}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
@@ -362,14 +386,11 @@ list_security_groups({Provider, UserName, Password}) ->
                             SecurityGroupName :: string() | binary(),
                             Description       :: string() | binary()) ->
           elibcloud_func_result(group_already_exists).
-create_security_group({Provider, UserName, Password}, SecurityGroupName,
-                      Description) ->
+create_security_group(Credentials, SecurityGroupName, Description) ->
 
     lager:debug("Create security group (Name=~p)", [SecurityGroupName]),
-    JsonInput = [{<<"action">>,            <<"create_security_group">>},
-                 {<<"provider">>,          bin(Provider)},
-                 {<<"userName">>,          bin(UserName)},
-                 {<<"password">>,          bin(Password)},
+    JsonInput = Credentials ++
+                [{<<"action">>,            <<"create_security_group">>},
                  {<<"securityGroupName">>, bin(SecurityGroupName)},
                  {<<"description">>,       bin(Description)}],
 
@@ -394,23 +415,20 @@ create_security_group({Provider, UserName, Password}, SecurityGroupName,
                                     SecurityGroupName :: string() | binary()) ->
           elibcloud_func_result(no_such_group |
                                 group_in_use).
-delete_security_group_by_name({Provider, UserName, Password},
-                              SecurityGroupName) ->
+delete_security_group_by_name(Credentials, SecurityGroupName) ->
 
     lager:debug("Delete security group (Name=~p)", [SecurityGroupName]),
-    JsonInput = [{<<"action">>,            <<"delete_security_group_by_name">>},
-                 {<<"provider">>,          bin(Provider)},
-                 {<<"userName">>,          bin(UserName)},
-                 {<<"password">>,          bin(Password)},
+    JsonInput = Credentials ++
+                [{<<"action">>,            <<"delete_security_group_by_name">>},
                  {<<"securityGroupName">>, bin(SecurityGroupName)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Security group created successfully (Name=~p)",
+            lager:debug("Security group deleted successfully (Name=~p)",
                         [SecurityGroupName]),
             {ok, JsonRes};
         {error, Error} ->
-            lager:debug("Security group creation error (Name=~p): ~p",
+            lager:debug("Security group deletion error (Name=~p): ~p",
                         [SecurityGroupName, Error]),
             {error, Error}
     end.
@@ -423,30 +441,27 @@ delete_security_group_by_name({Provider, UserName, Password},
 %% @end
 %%------------------------------------------------------------------------------
 -spec create_security_rules(Credentials       :: credentials(),
-                            SecurityGroupName :: string() | binary(),
+                            SecurityGroupId :: string() | binary(),
                             Rules             :: [security_rule()]) ->
           elibcloud_func_result(no_such_group).
-create_security_rules({Provider, UserName, Password}, SecurityGroupName,
-                      Rules) ->
+create_security_rules(Credentials, SecurityGroupId, Rules) ->
 
-    lager:debug("Create security rule (SecurityGroupName=~p)",
-                [SecurityGroupName]),
-    JsonInput = [{<<"action">>,            <<"create_security_rules">>},
-                 {<<"provider">>,          bin(Provider)},
-                 {<<"userName">>,          bin(UserName)},
-                 {<<"password">>,          bin(Password)},
-                 {<<"securityGroupName">>, bin(SecurityGroupName)},
-                 {<<"rules">>,             security_rules_to_json(Rules)}],
+    lager:debug("Create security rule (SecurityGroupId=~p)",
+                [SecurityGroupId]),
+    JsonInput = Credentials ++
+                [{<<"action">>,          <<"create_security_rules">>},
+                 {<<"securityGroupId">>, bin(SecurityGroupId)},
+                 {<<"rules">>,           security_rules_to_json(Rules)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             lager:debug("Security rule created successfully "
-                        "(SecurityGroupName=~p)", [SecurityGroupName]),
+                        "(SecurityGroupId=~p)", [SecurityGroupId]),
             {ok, JsonRes};
         {error, Error} ->
             lager:debug("Security rule creation error "
-                        "(SecurityGroupName=~p): ~p",
-                        [SecurityGroupName, Error]),
+                        "(SecurityGroupId=~p): ~p",
+                        [SecurityGroupId, Error]),
             {error, Error}
     end.
 
@@ -495,7 +510,7 @@ libcloud_wrapper(JsonInput) ->
 %%------------------------------------------------------------------------------
 %% @doc Execute the given OS command.
 %%
-%% The command's output is printed, and its exit code is returned.
+%% The command's output is and its exit code are returned.
 %%
 %% Original code from
 %% http://erlang.org/pipermail/erlang-questions/2007-February/025210.html
@@ -546,10 +561,13 @@ protocol_to_bin(Protocol) when Protocol =:= tcp;
 bin_list(Strings) ->
     [bin(String) || String <- Strings].
 
+%% Convert a term into a binary, which will be used as a JSON string.
 bin(Bin) when is_binary(Bin) ->
     Bin;
 bin(List) when is_list(List) ->
-    list_to_binary(List).
+    list_to_binary(List);
+bin(Atom) when is_atom(Atom) ->
+    list_to_binary(atom_to_list(Atom)).
 
 %% str(Bin) ->
 %%     binary_to_list(Bin).
