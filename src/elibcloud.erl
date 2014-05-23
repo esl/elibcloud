@@ -63,6 +63,17 @@
 %%% External functions
 %%%=============================================================================
 
+%%------------------------------------------------------------------------------
+%% @doc Return a `credentials()' term which can be passed to other elibcloud
+%% functions to set up the connection with the provider.
+%%
+%% The supported providers are the following: EC2, OPENSTACK_HP,
+%% OPENSTACK_RACKSPACE, DUMMY.
+%%
+%% The OPENSTACK_RACKSPACE provider does not support security groups (on
+%% Rackspace instances, all ports are open by default).
+%% @end
+%%------------------------------------------------------------------------------
 -spec create_credentials(Provider :: string() | binary(),
                          UserName :: string() | binary(),
                          Password :: string() | binary()) ->
