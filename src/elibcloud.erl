@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright (C) 2014, Erlang Solution Ltd.
+%%% Copyright (C) 2014, Erlang Solutions Ltd.
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 %%% @end
 %%%=============================================================================
 -module(elibcloud).
--copyright("2014, Erlang Solutions Ltd.").
 
 -export([create_credentials/3,
          create_credentials/4,

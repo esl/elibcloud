@@ -17,7 +17,6 @@
 %%% @end
 %%%=============================================================================
 -module(elibcloud_test).
--copyright("2014, Erlang Solutions Ltd.").
 
 -include_lib("eunit/include/eunit.hrl").
 
