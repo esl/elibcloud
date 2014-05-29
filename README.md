@@ -3,17 +3,16 @@ elibcloud
 
 Erlang wrapper around [Libcloud][libcloud].
 
-It currently works with the "elibcloud" branch of the [hcs42/libcloud GitHub
-repository][hcs42/libcloud].
+It was tested with the 21a0d069d0a138ab42ce4403ab553c7fc3e4bbb6 commit of the
+[Libcloud repository][apache/libcloud].
 
 ### Installation
 
 Install Python 3. It is recommended to use virtualenv.
 
-Install Libcloud from [hcs42/libcloud GitHub repository][hcs42/libcloud]:
+Install Libcloud from [Libcloud repository][apache/libcloud]:
 
-    $ git clone git@github.com:hcs42/libcloud.git
-    $ git checkout elibcloud
+    $ git clone git@github.com:apache/libcloud.git
     $ cd libcloud
     $ pip install -e .
 
@@ -22,7 +21,7 @@ the `PATH` is the same as the one that has Libcloud installed.
 
 Clone elibcloud and start it from the shell:
 
-    $ git clone git@github.com:esl/libcloud.git
+    $ git clone git@github.com:esl/elibcloud.git
     $ cd elarm
     $ make
     $ erl -pa ../elibcloud/ebin -pa deps/goldrush/ebin -pa deps/jsx/ebin -pa deps/lager/ebin
@@ -151,7 +150,7 @@ credentials term (e.g. by invoking `list_nodes(Cred)`).
 - Create security rules
 
 [libcloud]: https://libcloud.readthedocs.org/
-[hcs42/libcloud]: https://github.com/hcs42/libcloud/tree/elibcloud
+[apache/libcloud]: https://github.com/apache/libcloud
 [amazon-ec2]: https://console.aws.amazon.com/ec2/
 [hp-cloud]: https://horizon.hpcloud.com/
 [rackspace]: https://mycloud.rackspace.com/
