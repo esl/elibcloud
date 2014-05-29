@@ -123,6 +123,9 @@ credentials term (e.g. by invoking `list_nodes(Cred)`).
 
 ### Features
 
+See the edoc documentation of the exported functions in
+[src/elibcloud.erl][elibcloud.erl] for reference.
+
 **Supported providers:**
 
 - Amazon EC2
@@ -154,3 +157,4 @@ credentials term (e.g. by invoking `list_nodes(Cred)`).
 [amazon-ec2]: https://console.aws.amazon.com/ec2/
 [hp-cloud]: https://horizon.hpcloud.com/
 [rackspace]: https://mycloud.rackspace.com/
+[elibcloud.erl]: https://github.com/esl/elibcloud/blob/master/src/elibcloud.erl
