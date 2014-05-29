@@ -227,8 +227,7 @@ def create_node(conn, params):
 
     if params['provider'] == 'OPENSTACK_HP':
         node = next(x for x in conn.list_nodes() if x.id == node.id)
-        pool = conn.ex_create_floating_ip_handler()
-        ip = pool.create_floating_ip()
+        ip = conn.ex_create_floating_ip()
         conn.ex_attach_floating_ip_to_node(node, ip)
 
     # Wait until the public IP of the node appears
@@ -262,9 +261,8 @@ def destroy_node(conn, params):
     # associated with the instance.
     if params['provider'] == 'OPENSTACK_HP':
         ip_str = node.public_ips[0]
-        pool = conn.ex_create_floating_ip_handler()
-        ip = pool.get_floating_ip(ip_str)
-        pool.delete_floating_ip(ip)
+        ip = conn.ex_get_floating_ip(ip_str)
+        ip.delete()
 
     if node.destroy():
         exit_success({})
