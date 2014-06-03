@@ -55,14 +55,14 @@
                    | binary().
 
 -type elibcloud_func_result(ErrorAtoms) ::
-          {'ok', json_term()} |
+          {ok, json_term()} |
           {error, {ErrorAtom :: invalid_creds_error |
                                 socket_error |
                                 unsupported_provider |
                                 action_not_supported_on_provider |
                                 ErrorAtoms,
                    Details   :: json_term()}} |
-          {'error', string()}.
+          {error, string()}.
 
 -type security_rule() :: {FromPort :: integer(),
                           ToPort   :: integer(),
