@@ -22,7 +22,7 @@ the `PATH` is the same as the one that has Libcloud installed.
 Clone elibcloud and start it from the shell:
 
     $ git clone git@github.com:esl/elibcloud.git
-    $ cd elarm
+    $ cd elibcloud
     $ make
     $ erl -pa ../elibcloud/ebin -pa deps/goldrush/ebin -pa deps/jsx/ebin -pa deps/lager/ebin
     > application:start(syntax_tools).
