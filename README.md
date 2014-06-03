@@ -22,10 +22,11 @@ the `PATH` is the same as the one that has Libcloud installed.
 Clone elibcloud and start it from the shell:
 
     $ git clone git@github.com:esl/elibcloud.git
-    $ cd elarm
+    $ cd elibcloud
     $ make
     $ erl -pa ../elibcloud/ebin -pa deps/goldrush/ebin -pa deps/jsx/ebin -pa deps/lager/ebin
     > application:start(syntax_tools).
+    > application:start(compiler).
     > application:start(goldrush).
     > application:start(lager).
 
@@ -158,3 +159,14 @@ See the edoc documentation of the exported functions in
 [hp-cloud]: https://horizon.hpcloud.com/
 [rackspace]: https://mycloud.rackspace.com/
 [elibcloud.erl]: https://github.com/esl/elibcloud/blob/master/src/elibcloud.erl
+
+
+### FAQ
+
+**I cannot use elibcloud on Mac OS X because I get the "No CA Certificates were found in CA_CERTS_PATH" run-time error. How can I solve this?**
+
+On Mac OS X, I have fixed this by installing `curl-ca-bundle`. You can install it using `brew`.
+
+```sh
+brew install curl-ca-bundle
+```

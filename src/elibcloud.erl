@@ -41,6 +41,8 @@
                               <<"RACKSPACE">>,
                               <<"DUMMY">>]).
 
+-define(TIMEOUT_LIBCLOUD_CHECK, 500).
+
 %%------------------------------------------------------------------------------
 %% Types
 %%------------------------------------------------------------------------------
@@ -69,6 +71,21 @@
                           Port     :: tcp | udp | icmp}.
 
 -opaque credentials() :: json_term().
+
+%%------------------------------------------------------------------------------
+%% Sanity check
+%%------------------------------------------------------------------------------
+-on_load(ensure_libcloud_is_installed/0).
+
+ensure_libcloud_is_installed() ->
+    Script = filename:join([code:priv_dir(elibcloud), "libcloud_check.py"]),
+    Port = open_port({spawn_executable, Script}, [exit_status]),
+    receive
+        {Port, {exit_status, 0}} ->
+            ok
+    after ?TIMEOUT_LIBCLOUD_CHECK ->
+            throw(libcloud_not_found)
+    end.
 
 %%%=============================================================================
 %%% External functions
