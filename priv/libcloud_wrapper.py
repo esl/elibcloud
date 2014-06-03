@@ -344,7 +344,7 @@ def delete_key_pair(conn, params):
 def list_security_groups(conn, params):
     """List all security groups."""
 
-    assert_provider(params, ('EC2, OPENSTACK_HP'))
+    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
     sec_groups = conn.ex_list_security_groups()
     if params['provider'] == 'OPENSTACK_HP':
         sec_groups = [s.name for s in sec_groups]
@@ -355,7 +355,7 @@ def list_security_groups(conn, params):
 def create_security_group(conn, params):
     """Create a security group."""
 
-    assert_provider(params, ('EC2, OPENSTACK_HP'))
+    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
     sec_group_descr = params['description']
     sec_group_name = params['securityGroupName']
 
@@ -380,7 +380,7 @@ def create_security_group(conn, params):
 def delete_security_group_by_name(conn, params):
     """Delete a security group."""
 
-    assert_provider(params, ('EC2, OPENSTACK_HP'))
+    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
     sec_group_name = params['securityGroupName']
 
     try:
@@ -410,7 +410,7 @@ def delete_security_group_by_name(conn, params):
 def create_security_rules(conn, params):
     """Add a rules a security group."""
 
-    assert_provider(params, ('EC2, OPENSTACK_HP'))
+    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
     if params['provider'] == 'EC2':
         return create_security_rules_ec2(conn, params)
     elif params['provider'] == 'OPENSTACK_HP':
@@ -419,7 +419,7 @@ def create_security_rules(conn, params):
 
 def create_security_rules_ec2(conn, params):
 
-    assert_provider(params, ('EC2, OPENSTACK_HP'))
+    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
     sec_group_id = params['securityGroupId']
 
     # Rule example: {'protocol': 'tcp', 'from_port': 22, 'to_port': 22}
@@ -454,7 +454,7 @@ def create_security_rules_ec2(conn, params):
 
 def create_security_rules_openstack(conn, params):
 
-    assert_provider(params, ('EC2, OPENSTACK_HP'))
+    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
     sec_group_id = params['securityGroupId']
 
     # Rule example: {'protocol': 'tcp', 'from_port': 22, 'to_port': 22}
