@@ -26,6 +26,7 @@ Clone elibcloud and start it from the shell:
     $ make
     $ erl -pa ../elibcloud/ebin -pa deps/goldrush/ebin -pa deps/jsx/ebin -pa deps/lager/ebin
     > application:start(syntax_tools).
+    > application:start(compiler).
     > application:start(goldrush).
     > application:start(lager).
 
