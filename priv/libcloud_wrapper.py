@@ -144,6 +144,14 @@ def assert_provider(params, supported_providers):
                        'provider': params['provider']})
 
 
+def find_security_group_by_name_ec2(conn, sec_group_name):
+    sec_groups = conn.ex_get_security_groups(group_names=[sec_group_name])
+    if len(sec_groups) == 0:
+        exit_json_err({'error': 'no_such_group'},
+                      {'group_name': sec_group_name})
+    else:
+        return sec_groups[0]
+
 def find_security_group_openstack(conn, f, error_dict):
     sec_groups = conn.ex_list_security_groups()
     try:
@@ -419,13 +427,18 @@ def create_security_rules(conn, params):
 
 def create_security_rules_ec2(conn, params):
 
-    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
-    sec_group_id = params['securityGroupId']
-
     # Rule example: {'protocol': 'tcp', 'from_port': 22, 'to_port': 22}
     sec_rules = params['rules']
 
     try:
+        use_name = False
+        if 'securityGroupId' in params:
+            sec_group_id = params['securityGroupId']
+        elif 'securityGroupName' in params:
+            use_name = True
+            sec_group_name = params['securityGroupName']
+            sec_group_id = find_security_group_by_name_ec2(conn, sec_group_name).id
+
         f = conn.ex_authorize_security_group_ingress
         for rule in sec_rules:
             try:
@@ -445,8 +458,12 @@ def create_security_rules_ec2(conn, params):
     except Exception as e:
         if (is_exception(e, 'InvalidGroup.NotFound') or
             is_exception(e, 'InvalidGroupId.Malformed')):
-            exit_json_err({'error': 'no_such_group',
-                           'group_id': sec_group_id})
+            if use_name:
+                exit_json_err({'error': 'no_such_group',
+                               'group_name': sec_group_name})
+            else:
+                exit_json_err({'error': 'no_such_group',
+                               'group_id': sec_group_id})
         else:
             raise
     exit_success({})
@@ -454,14 +471,18 @@ def create_security_rules_ec2(conn, params):
 
 def create_security_rules_openstack(conn, params):
 
-    assert_provider(params, ('EC2', 'OPENSTACK_HP'))
-    sec_group_id = params['securityGroupId']
-
     # Rule example: {'protocol': 'tcp', 'from_port': 22, 'to_port': 22}
     sec_rules = params['rules']
-    sec_group = find_security_group_by_id_openstack(conn, sec_group_id)
+
+    if 'securityGroupId' in params:
+        sec_group_id = params['securityGroupId']
+        sec_group = find_security_group_by_id_openstack(conn, sec_group_id)
+    elif 'securityGroupName' in params:
+        sec_group_name = params['securityGroupName']
+        sec_group = find_security_group_by_name_openstack(conn, sec_group_name)
 
     try:
+
         f = conn.ex_create_security_group_rule
         for rule in sec_rules:
             try:

@@ -462,28 +462,36 @@ delete_security_group_by_name(Credentials, SecurityGroupName) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec create_security_rules(Credentials       :: credentials(),
-                            SecurityGroupId :: string() | binary(),
-                            Rules             :: [security_rule()]) ->
+-spec create_security_rules(Credentials   :: credentials(),
+                            SecurityGroup :: {id,   string() | binary()} |
+                                             {name, string() | binary()},
+                            Rules         :: [security_rule()]) ->
           elibcloud_func_result(no_such_group).
-create_security_rules(Credentials, SecurityGroupId, Rules) ->
+create_security_rules(Credentials, SecurityGroup, Rules) ->
 
-    lager:debug("Create security rule (SecurityGroupId=~p)",
-                [SecurityGroupId]),
-    JsonInput = Credentials ++
-                [{<<"action">>,          <<"create_security_rules">>},
-                 {<<"securityGroupId">>, bin(SecurityGroupId)},
-                 {<<"rules">>,           security_rules_to_json(Rules)}],
+    lager:debug("Create security rule (SecurityGroup=~p)",
+                [SecurityGroup]),
+    GroupIdOrName =
+        case SecurityGroup of
+            {id, Id} ->
+                [{<<"securityGroupId">>, bin(Id)}];
+            {name, Name} ->
+                [{<<"securityGroupName">>, bin(Name)}]
+        end,
+
+    JsonInput = Credentials ++ GroupIdOrName ++
+                [{<<"action">>, <<"create_security_rules">>},
+                 {<<"rules">>,  security_rules_to_json(Rules)}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
             lager:debug("Security rule created successfully "
-                        "(SecurityGroupId=~p)", [SecurityGroupId]),
+                        "(SecurityGroup=~p)", [SecurityGroup]),
             {ok, JsonRes};
         {error, Error} ->
             lager:debug("Security rule creation error "
-                        "(SecurityGroupId=~p): ~p",
-                        [SecurityGroupId, Error]),
+                        "(SecurityGroup=~p): ~p",
+                        [SecurityGroup, Error]),
             {error, Error}
     end.
 
