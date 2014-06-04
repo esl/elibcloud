@@ -270,14 +270,21 @@ def create_node(conn, params):
 def destroy_node(conn, params):
     """Destroy a virtual machine node."""
 
-    node_id = params['nodeId']
-
-    # Get node
-    try:
-        node = next(x for x in conn.list_nodes() if x.id == node_id)
-    except StopIteration:
-        exit_json_err({'error': 'no_such_node',
-                       'node_id': node_id})
+    # Get the node
+    if 'nodeId' in params:
+        node_id = params['nodeId']
+        try:
+            node = next(x for x in conn.list_nodes() if x.id == node_id)
+        except StopIteration:
+            exit_json_err({'error': 'no_such_node',
+                           'node_id': node_id})
+    elif 'nodeName' in params:
+        node_name = params['nodeName']
+        try:
+            node = next(x for x in conn.list_nodes() if x.name == node_name)
+        except StopIteration:
+            exit_json_err({'error': 'no_such_node',
+                           'node_name': node_name})
 
     # If we are using the HP cloud, we also want to delete the floating IPs
     # associated with the instance.

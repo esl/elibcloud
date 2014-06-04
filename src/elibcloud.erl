@@ -243,23 +243,28 @@ create_node(Credentials, NodeName, SizeId, ImageId, KeyName,
 %% @end
 %%------------------------------------------------------------------------------
 -spec destroy_node(Credentials :: credentials(),
-                       NodeId      :: string() | binary()) ->
+                   Node        :: {id, string() | binary()} |
+                                  {name, string() | binary()}) ->
           elibcloud_func_result(no_such_node).
-destroy_node(Credentials, NodeId) ->
+destroy_node(Credentials, Node) ->
 
-    lager:debug("Destroy node (NodeId=~p)", [NodeId]),
-    JsonInput = Credentials ++
-                [{<<"action">>,     <<"destroy_node">>},
-                 {<<"nodeId">>,     bin(NodeId)}],
+    lager:debug("Destroy node (Node=~p)", [Node]),
+    NodeIdOrName =
+        case Node of
+            {id, Id} ->
+                [{<<"nodeId">>, bin(Id)}];
+            {name, Name} ->
+                [{<<"nodeName">>, bin(Name)}]
+        end,
+    JsonInput = Credentials ++ NodeIdOrName ++
+                [{<<"action">>, <<"destroy_node">>}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Node destroyed successfully (NodeId=~p)",
-                        [NodeId]),
+            lager:debug("Node destroyed successfully (Node=~p)", [Node]),
             {ok, JsonRes};
         {error, String} = Error ->
-            lager:debug("Node destruction error (NodeId=~p): ~p",
-                        [NodeId, String]),
+            lager:debug("Node destruction error (Node=~p): ~p", [Node, String]),
             Error
     end.
 
