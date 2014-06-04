@@ -30,7 +30,7 @@
          delete_key_pair/2,
          list_security_groups/1,
          create_security_group/3,
-         delete_security_group_by_name/2,
+         delete_security_group/2,
          create_security_rules/3]).
 
 -export_type([credentials/0]).
@@ -438,25 +438,33 @@ create_security_group(Credentials, SecurityGroupName, Description) ->
 %% In case of success, the result is an empty JSON object.
 %% @end
 %%------------------------------------------------------------------------------
--spec delete_security_group_by_name(Credentials       :: credentials(),
-                                    SecurityGroupName :: string() | binary()) ->
+-spec delete_security_group(Credentials   :: credentials(),
+                            SecurityGroup :: {id,   string() | binary()} |
+                                             {name, string() | binary()}) ->
           elibcloud_func_result(no_such_group |
                                 group_in_use).
-delete_security_group_by_name(Credentials, SecurityGroupName) ->
+delete_security_group(Credentials, SecurityGroup) ->
 
-    lager:debug("Delete security group (Name=~p)", [SecurityGroupName]),
-    JsonInput = Credentials ++
-                [{<<"action">>,            <<"delete_security_group_by_name">>},
-                 {<<"securityGroupName">>, bin(SecurityGroupName)}],
+    lager:debug("Delete security group (Group=~p)", [SecurityGroup]),
+    GroupIdOrName =
+        case SecurityGroup of
+            {id, Id} ->
+                [{<<"securityGroupId">>, bin(Id)}];
+            {name, Name} ->
+                [{<<"securityGroupName">>, bin(Name)}]
+        end,
+
+    JsonInput = Credentials ++ GroupIdOrName ++
+                [{<<"action">>, <<"delete_security_group_by_name">>}],
 
     case libcloud_wrapper(JsonInput) of
         {ok, JsonRes} ->
-            lager:debug("Security group deleted successfully (Name=~p)",
-                        [SecurityGroupName]),
+            lager:debug("Security group deleted successfully (Group=~p)",
+                        [SecurityGroup]),
             {ok, JsonRes};
         {error, Error} ->
-            lager:debug("Security group deletion error (Name=~p): ~p",
-                        [SecurityGroupName, Error]),
+            lager:debug("Security group deletion error (Group=~p): ~p",
+                        [SecurityGroup, Error]),
             {error, Error}
     end.
 

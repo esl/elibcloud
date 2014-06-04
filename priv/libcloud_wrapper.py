@@ -396,23 +396,41 @@ def delete_security_group_by_name(conn, params):
     """Delete a security group."""
 
     assert_provider(params, ('EC2', 'OPENSTACK_HP'))
-    sec_group_name = params['securityGroupName']
 
     try:
-        if params['provider'] == 'EC2':
-            success = conn.ex_delete_security_group_by_name(
-                          group_name=sec_group_name)
-        elif params['provider'] == 'OPENSTACK_HP':
-            sec_group = find_security_group_by_name_openstack(conn, sec_group_name)
-            success = conn.ex_delete_security_group(sec_group)
+        use_name = False
+        if 'securityGroupId' in params:
+            sec_group_id = params['securityGroupId']
+            if params['provider'] == 'EC2':
+                success = conn.ex_delete_security_group_by_id(
+                              group_id=sec_group_id)
+            elif params['provider'] == 'OPENSTACK_HP':
+                sec_group = find_security_group_by_id_openstack(conn,
+                                sec_group_id)
+                success = conn.ex_delete_security_group(sec_group)
+        elif 'securityGroupName' in params:
+            use_name = True
+            sec_group_name = params['securityGroupName']
+            if params['provider'] == 'EC2':
+                success = conn.ex_delete_security_group_by_name(
+                              group_name=sec_group_name)
+            elif params['provider'] == 'OPENSTACK_HP':
+                sec_group = find_security_group_by_name_openstack(conn,
+                                sec_group_name)
+                success = conn.ex_delete_security_group(sec_group)
 
     except Exception as e:
+        if use_name:
+            error_dict = {'group_name': sec_group_name}
+        else:
+            error_dict = {'group_id': sec_group_id}
+
         if is_exception(e, 'InvalidGroup.NotFound'):
-            exit_json_err({'error': 'no_such_group',
-                           'group_name': sec_group_name})
+            error_dict.update({'error': 'no_such_group'})
+            exit_json_err(error_dict)
         elif is_exception(e, 'InvalidGroup.InUse'):
-            exit_json_err({'error': 'group_in_use',
-                           'group_name': sec_group_name})
+            error_dict.update({'error': 'group_in_use'})
+            exit_json_err(error_dict)
         else:
             raise
 
