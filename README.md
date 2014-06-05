@@ -3,16 +3,17 @@ elibcloud
 
 Erlang wrapper around [Libcloud][libcloud].
 
-It was tested with the 21a0d069d0a138ab42ce4403ab553c7fc3e4bbb6 commit of the
-[Libcloud repository][apache/libcloud].
+It was tested with the 4da5771708b185725f26e60287e554b0416e8030
+commit of the [hcs42/libcloud][hcs42/libcloud].
 
 ### Installation
 
 Install Python 3. It is recommended to use virtualenv.
 
-Install Libcloud from [Libcloud repository][apache/libcloud]:
+Install Libcloud:
 
-    $ git clone git@github.com:apache/libcloud.git
+    $ git clone https://github.com/hcs42/libcloud.git
+    $ git checkout 4da5771708b185725f26e60287e554b0416e8030
     $ cd libcloud
     $ pip install -e .
 
@@ -21,11 +22,12 @@ the `PATH` is the same as the one that has Libcloud installed.
 
 Clone elibcloud and start it from the shell:
 
-    $ git clone git@github.com:esl/elibcloud.git
-    $ cd elarm
+    $ git clone https://github.com/hcs42/elibcloud.git
+    $ cd elibcloud
     $ make
     $ erl -pa ../elibcloud/ebin -pa deps/goldrush/ebin -pa deps/jsx/ebin -pa deps/lager/ebin
     > application:start(syntax_tools).
+    > application:start(compiler).
     > application:start(goldrush).
     > application:start(lager).
 
@@ -154,6 +156,7 @@ See the edoc documentation of the exported functions in
 
 [libcloud]: https://libcloud.readthedocs.org/
 [apache/libcloud]: https://github.com/apache/libcloud
+[hcs42/libcloud]: https://github.com/hcs42/libcloud
 [amazon-ec2]: https://console.aws.amazon.com/ec2/
 [hp-cloud]: https://horizon.hpcloud.com/
 [rackspace]: https://mycloud.rackspace.com/
