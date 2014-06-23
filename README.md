@@ -8,19 +8,37 @@ commit of the [hcs42/libcloud][hcs42/libcloud].
 
 ### Installation
 
-Install Python 3. It is recommended to use virtualenv.
+A more thorough installation example is available in the [elibcloud
+tutorial][tutorial].
 
-Install Libcloud:
+[tutorial]: doc/tutorial.md
 
-    $ git clone https://github.com/hcs42/libcloud.git
-    $ git checkout 4da5771708b185725f26e60287e554b0416e8030
-    $ cd libcloud
-    $ pip install -e .
+Install elibcloud's dependencies:
 
-When starting your Erlang node, make sure that the first `python3` executable in
-the `PATH` is the same as the one that has Libcloud installed.
+1. Install Python 3. It is recommended to use virtualenv.
 
-Clone elibcloud and start it from the shell:
+2. Install Libcloud:
+
+        $ git clone https://github.com/hcs42/libcloud.git
+        $ git checkout 4da5771708b185725f26e60287e554b0416e8030
+        $ cd libcloud
+        $ pip install -e .
+
+3. When starting your Erlang node, make sure that the first `python3` executable
+   in the `PATH` is the same as the one that has Libcloud installed.
+
+4. Ensure that `CA_CERTS_PATH` works for you by installing the necessary
+   package, which is different for different operating systems. See a list
+   [here]. For OS X, you can use brew:
+
+        $ brew install curl-ca-bundle
+
+[here]: http://libcloud.readthedocs.org/en/latest/other/ssl-certificate-validation.html
+
+If you use an Erlang tool whose dependency is elibcloud, you can stop here,
+because the tool will install elibcloud itself (unless it says otherwise).
+
+If you would like to try elibcloud from the shell, clone this repository and start it from the shell:
 
     $ git clone https://github.com/hcs42/elibcloud.git
     $ cd elibcloud
@@ -153,6 +171,12 @@ See the edoc documentation of the exported functions in
 - Create a security group
 - Delete a security group
 - Create security rules
+
+### FAQ
+
+**I cannot use elibcloud on Mac OS X because I get the "No CA Certificates were found in CA_CERTS_PATH" run-time error. How can I solve this?**
+
+The `CA_CERTS_PATH` is missing; see the installation steps.
 
 [libcloud]: https://libcloud.readthedocs.org/
 [apache/libcloud]: https://github.com/apache/libcloud
