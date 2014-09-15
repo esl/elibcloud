@@ -72,14 +72,14 @@ destroy_node_test() ->
 
     Res = elibcloud:destroy_node(
             _Credentials = credentials(),
-            _NodeId = "1"),
+            {id, _NodeId = "1"}),
 
     ?assertMatch({ok, [{}]}, Res).
 
 destroy_non_existent_node_test() ->
     Res = elibcloud:destroy_node(
             _Credentials = credentials(),
-            _NodeId = "my_nodeid"),
+            {id, _NodeId = "my_nodeid"}),
 
     ?assertMatch({error, {no_such_node, _Details}}, Res),
     {error, {no_such_node, Details}} = Res,
