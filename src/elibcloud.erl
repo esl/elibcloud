@@ -45,14 +45,7 @@
 %% Types
 %%------------------------------------------------------------------------------
 
--type json_term() :: list({binary(), json_term()})
-                   | list(json_term())
-                   | true
-                   | false
-                   | null
-                   | integer()
-                   | float()
-                   | binary().
+-type json_term() :: jsx:json_term().
 
 -type elibcloud_func_result(ErrorAtoms) ::
           {ok, json_term()} |
