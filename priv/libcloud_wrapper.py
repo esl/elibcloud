@@ -186,6 +186,20 @@ def sec_group_names_to_objects_openstack(conn, sec_group_names):
 ##### Business logic functions #####
 
 
+def list_sizes(conn, params):
+    """List all available sizes."""
+
+    sizes = conn.list_sizes()
+    exit_success(jf(sizes))
+
+
+def list_images(conn, params):
+    """List all available images."""
+
+    images = conn.list_images()
+    exit_success(jf(images))
+
+
 def list_nodes(conn, params):
     """List all nodes."""
 
