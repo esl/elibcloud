@@ -33,7 +33,8 @@
          delete_security_group/2,
          create_security_rules/3]).
 
--export_type([credentials/0]).
+-export_type([credentials/0,
+              security_rule/0]).
 
 -define(SUPPORTED_PROVIDERS, [<<"EC2">>,
                               <<"OPENSTACK_HP">>,
