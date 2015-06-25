@@ -90,7 +90,7 @@ create_credentials(Provider, UserName, Password) ->
 -spec create_credentials(Provider :: string() | binary(),
                          UserName :: string() | binary(),
                          Password :: string() | binary(),
-                         Extra :: []) ->
+                         Extra :: json_term()) ->
           {ok, credentials()} |
           {error, {not_supported_provider, binary()}}.
 create_credentials(Provider, UserName, Password, Extra) ->
