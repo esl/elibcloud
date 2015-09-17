@@ -521,12 +521,6 @@ libcloud_wrapper(JsonInput) ->
         0 ->
             % JSON printed at the Python side
             {ok, jsx:decode(list_to_binary(Output))};
-        1 ->
-            % Python exception not caught -> string output
-            {error, Output};
-        2 ->
-            % Error string printed at the Python side
-            {error, Output};
         3 ->
             % Error JSON printed at the Python side
             case jsx:decode(list_to_binary(Output)) of
@@ -541,7 +535,14 @@ libcloud_wrapper(JsonInput) ->
                                 error_field_missing
                         end,
                     {error, {ErrorAtom, JsonError}}
-            end
+            end;
+        _ ->
+            % Ret = 1 => Python exception not caught -> string output
+            % Ret = 2 => Error string printed at the Python side
+            % Otherwise => reserved exit code, see e.g.
+            % http://tldp.org/LDP/abs/html/exitcodes.html
+            Text = ["Return code: ", integer_to_list(Ret), "\n", Output],
+            {error, lists:flatten(io_lib:format(Text, ""))}
     end.
 
 %%------------------------------------------------------------------------------
