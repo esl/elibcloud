@@ -225,7 +225,11 @@ def create_node(conn, params):
                        'size_id': size_id})
 
     # Get image
-    images = conn.list_images()
+    if params['provider'] == 'EC2':
+        images = conn.list_images(ex_image_ids=[image_id])
+    else:
+        images = conn.list_images()
+
     try:
         image = next(x for x in images if x.id == image_id)
     except StopIteration:
